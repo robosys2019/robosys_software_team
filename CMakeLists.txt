@@ -8,10 +8,15 @@ find_package(catkin REQUIRED COMPONENTS
 
 # For OpenCV
 find_package( OpenCV REQUIRED )
-include_directories( ${OpenCV_INCLUDE_DIRS} )
+# For libfreenect2
+find_package( freenect2 REQUIRED HINTS "$ENV{HOME}/freenect2")
+
+include_directories( include
+  ${OpenCV_INCLUDE_DIRS}
+  ${freenect2_INCLUDE_DIRS}
+)
 
 INCLUDE_DIRECTORIES(
-  ${freenect2_INCLUDE_DIR}
 )
 
 ADD_EXECUTABLE(KinectOneStream

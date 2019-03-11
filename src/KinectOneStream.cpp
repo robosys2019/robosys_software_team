@@ -62,7 +62,12 @@ void setup_kinect(){
 }
 
 void setup_ros(){
-
+    it = new image_transport::ImageTransport(nh);
+    rgb_pub = it->advertise("camera/image", 1);
+    depth_pub = it->advertise("camera/depth", 1);
+    depth_undistorted_pub = it->advertise("camera/depth_undistorted", 1);
+    ir_pub = it->advertise("camera/ir", 1);
+    rgbd_pub = it->advertise("camera/imaged", 1);
 }
 
 void loop(){
@@ -77,33 +82,31 @@ void loop(){
         cv::Mat(ir->height, ir->width, CV_32FC1, ir->data).copyTo(irmat);
         cv::Mat(depth->height, depth->width, CV_32FC1, depth->data).copyTo(depthmat);
 
-        cv::imshow("rgb", rgbmat);
-        cv::imshow("ir", irmat / 4096.0f);
-        cv::imshow("depth", depthmat / 4096.0f);
-
-        //! [registration]
         registration->apply(rgb, depth, undistorted, registered, true, depth2rgb);
 
         cv::Mat(undistorted->height, undistorted->width, CV_32FC1, undistorted->data).copyTo(depthmatUndistorted);
         cv::Mat(registered->height, registered->width, CV_8UC4, registered->data).copyTo(rgbd);
         cv::Mat(depth2rgb->height, depth2rgb->width, CV_32FC1, depth2rgb->data).copyTo(rgbd2);
 
-
-        cv::imshow("undistorted", depthmatUndistorted / 4096.0f);
-        cv::imshow("registered", rgbd);
-        cv::imshow("depth2RGB", rgbd2 / 4096.0f);
-
         publish();
         ros::spinOnce();
-
-        int key = cv::waitKey(1);
 
         listener->release(frames);
     }
 }
 
 void publish(){
+    rgb_msg = cv_bridge::CvImage(std_msgs::Header(), "rgba8", rgbmat).toImageMsg();
+    depth_msg = cv_bridge::CvImage(std_msgs::Header(), "32FC1", depthmat).toImageMsg();
+    depth_undistorted_msg = cv_bridge::CvImage(std_msgs::Header(), "32FC1", irmat).toImageMsg();
+    ir_msg = cv_bridge::CvImage(std_msgs::Header(), "32FC1", depthmatUndistorted).toImageMsg();
+    rgbd_msg = cv_bridge::CvImage(std_msgs::Header(), "rgba8", rgbd).toImageMsg();
 
+    rgb_pub.publish(rgb_msg);
+    depth_pub.publish(depth_msg);
+    depth_undistorted_pub.publish(depth_undistorted_msg);
+    ir_pub.publish(ir_msg);
+    rgbd_pub.publish(rgbd_msg);
 }
 
 int main(int argc, char **argv){

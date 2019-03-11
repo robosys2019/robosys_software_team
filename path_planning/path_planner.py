@@ -42,11 +42,16 @@ class Node():
 class PathPlanner():
     def __init__(self):
         # map of costs (2d array)
+        """
         self.data = np.array([[6, 2, 0, 1],
                     [9, 6, 5, 2],
                     [0, 0, 0, 11],
                     [0,0,0,0],
                     [0,0,0,0]])
+        """
+        height = 10 # height of array
+        width = 10 # width
+        self.data = np.random.random((height, width))
 
         # creating end node with pos, g, and h costs (no parent yet)
         rows, columns = self.data.shape
@@ -284,7 +289,7 @@ class PathPlanner():
             y.append(pos[0]+.5)
 
         # plot heat map
-        sns.heatmap(self.data)
+        sns.heatmap(self.data, cmap="YlGnBu")
 
         thickness = 100
 
@@ -326,21 +331,6 @@ class PathPlanner():
         path = self.plan_path()
         print("END PATH PLANNING")
         self.plot_path(path)
-        
-        #current_node = Node(pos=[0,0])
-        #neighbors_pos = self.get_neighbors(current_node)
-        #g_costs = self.calculate_g(neighbors_pos)
-        #print(g_costs)
-        #print(type(self.data))
-        """
-        open_set = self.plan_path()
-        for node in open_set:
-            print(node.pos, node.get_f())
-            #return
-        
-        print("this")
-        print(open_set[0].get_f())
-        """
 
 if __name__ == '__main__':
     code = PathPlanner()

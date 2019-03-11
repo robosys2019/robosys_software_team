@@ -11,7 +11,8 @@ https://www.redblobgames.com/pathfinding/a-star/introduction.html
 """
 """
 STATUS:
-in path_planner, working on whether neighbors exist in open or closed
+Modifying g cost.
+
 """
 
 from collections import deque
@@ -41,11 +42,11 @@ class Node():
 class PathPlanner():
     def __init__(self):
         # map of costs (2d array)
-        self.data = np.array([[0, 1, 2, 3],
-                    [4, 5, 6, 7],
-                    [8, 9, 10, 11],
-                    [1,1,1,1],
-                    [1,2,3,4]])
+        self.data = np.array([[6, 2, 0, 1],
+                    [9, 6, 5, 2],
+                    [0, 0, 0, 11],
+                    [0,0,0,0],
+                    [0,0,0,0]])
 
         # creating end node with pos, g, and h costs (no parent yet)
         rows, columns = self.data.shape
@@ -56,17 +57,48 @@ class PathPlanner():
         # create start node with pos, g, and h costs (no parent ever)
         self.start_x = random.randint(0,columns-1)
         self.start_y = random.randint(0,rows-1)
+        #self.start_x = 3
+        #self.start_y = 1
         self.start_node = Node(pos=[self.start_y,self.start_x])
 
     def calculate_h(self, pos):
         # calculate distance from current node to end node
         x = pos[1] # column index
         y = pos[0] # row index
-        h = m.sqrt((x-self.end_x)**2 + (y-self.end_y)**2) # simple triangle dist formula: a^2 + b^2 = c^2
+        h = m.sqrt((x-self.end_x)**2 + (y-self.end_y)**2) # simple triangle dist formula to end: a^2 + b^2 = c^2
         return h
 
+    def calculate_g(self, positions):
+        """
+        calculates g cost with combo of 
+        """
+        # Generic g cost from current to neighboring points
+        generic_cost = [1.4, 1, 1.4,
+                1, 1,
+                1.4, 1, 1.4]
+
+        # add weight of value (slope) in array
+        slope_weight = []
+        print(positions)
+        
+        for i in range(0,len(positions)):
+            current_pos = positions[i]
+            if current_pos: # If the position exists
+                slope = self.data[current_pos[0],current_pos[1]]
+                slope_weight.append(slope)
+            else:
+                slope_weight.append(0)
+
+        total_g = np.add(generic_cost,slope_weight)
+        print(total_g)
+        return total_g
+
     def get_neighbors(self, node):
-        # return positions of current node's neighbors
+        """
+        Return positions of current node's neighbors in 1d array from top left to bottom right
+
+        This deals with corner and edge cases, and calls all else the general case
+        """
         neighbors = []
         row = node.pos[0]
         col = node.pos[1]
@@ -74,36 +106,65 @@ class PathPlanner():
         # get max dimensions of map for corner cases
         max_row, max_column = self.data.shape
 
-        # corner cases
-        if (node.pos == [0,0]):
-            # top left
-            print("NEIGHBORS: TOP LEFT")
-            neighbors = [None, None, None,
-                        None, [row, col+1],
-                        None, [row+1, col], [row+1, col+1]]
+        # EDGE CASES
+        # top row
+        if (node.pos[0] == 0): 
+            if (node.pos[1] == 0):
+                # top left corner
+                print("NEIGHBORS: TOP LEFT")
+                neighbors = [None, None, None,
+                            None, [row, col+1],
+                            None, [row+1, col], [row+1, col+1]]
+            elif (node.pos[1] == max_column-1):
+                # top right corner
+                print("NEIGHBORS: TOP RIGHT")
+                neighbors = [None, None, None,
+                        [row, col-1], None,
+                        [row+1, col-1], [row+1, col], None]
+            else:
+                # just top row
+                print("NEIGHBORS: TOP SIDE")
+                neighbors = [None, None, None,
+                        [row, col-1], [row, col+1],
+                        [row+1, col-1], [row+1, col], [row+1, col+1]]
 
-        elif (node.pos == [0,max_column-1]):
-             # top right
-            print("NEIGHBORS: TOP RIGHT")
-            neighbors = [None, None, None,
+        # bottom row
+        elif (node.pos[0] == max_row-1):
+            if (node.pos[1] == 0): 
+                # bottom left corner
+                print("NEIGHBORS: BOTTOM LEFT")
+                neighbors = [None, [row-1, col], [row-1, col+1],
+                            None, [row, col+1],
+                            None, None, None]
+            elif (node.pos == [max_row-1,max_column-1]): 
+                # bottom right corner
+                print("NEIGHBORS: BOTTOM RIGHT")
+                neighbors = [[row-1, col-1], [row-1, col], None,
+                            [row, col-1], None,
+                            None, None, None]
+            else:
+                # just bottom row
+                print("NEIGHBORS: BOTTOM SIDE")
+                neighbors= [[row-1, col-1], [row-1, col], [row-1, col+1],
+                            [row, col-1], [row, col+1],
+                            None, None, None]
+
+        # left column and not corners
+        elif (node.pos[1] == 0 and node.pos[0] != 0 and node.pos[0] != max_row-1):
+            print("NEIGHBORS: LEFT SIDE")
+            neighbors = [None, [row-1, col], [row-1, col+1],
+                            None, [row, col+1],
+                            None, [row+1, col], [row+1, col+1]]
+        
+        # right column and not corners
+        elif (node.pos[1] == max_column-1 and node.pos[0] != 0 and node.pos[0] != max_row-1):
+            print("NEIGHBORS: RIGHT SIDE")
+            neighbors = [[row-1, col-1], [row-1, col], None,
                         [row, col-1], None,
                         [row+1, col-1], [row+1, col], None]
 
-        elif (node.pos == [max_row-1,0]): 
-            # bottom left
-            print("NEIGHBORS: BOTTOM LEFT")
-            neighbors = [None, [row-1, col], [row-1, col+1],
-                        None, [row, col+1],
-                        None, None, None]
-
-        elif (node.pos == [max_row-1,max_column-1]): 
-            # bottom right
-            print("NEIGHBORS: BOTTOM RIGHT")
-            neighbors = [[row-1, col-1], [row-1, col], None,
-                        [row, col-1], None,
-                        None, None, None]
-
-        else: # general case
+        # general case
+        else:
             print("NEIGHBORS: GENERAL CASE")
             neighbors = [[row-1, col-1], [row-1, col], [row-1, col+1],
                         [row, col-1], [row, col+1],
@@ -112,25 +173,29 @@ class PathPlanner():
         return neighbors
 
     def plan_path(self):
+        """
+        This plans a path using A*
+        It calls get_neighbors to obtain the neighbors of the current node
+        It calls calculate_g_cost to obtain the g cost for the neighboring points.
+        """
+
         # INITIALIZE NODE SETS
         open_set = [] # contains unvisited nodes in cost order by f (lowest to the left)
         created_set = [] # contains all created nodes
 
-        # General g cost from current to neighboring points
-        g_cost = [1.4, 1, 1.4,
-                1, 1,
-                1.4, 1, 1.4]
-
         # INITIALIZE PATH WITH START NODE AND ITS NEIGHBORS
         current_node = self.start_node
+        print(current_node.pos)
         created_set.append(current_node)
         neighbors_pos = self.get_neighbors(current_node)
+        g_costs = self.calculate_g(neighbors_pos)
+
         for i in range(0, len(neighbors_pos)):
             if neighbors_pos[i]:
                 # create neighbor node
                 parent = current_node
                 pos = neighbors_pos[i]
-                g = g_cost[i]
+                g = g_costs[i]
                 h = self.calculate_h(pos)
                 new_node = Node(pos=pos, parent=parent, g=g, h=h)
 
@@ -151,6 +216,8 @@ class PathPlanner():
                 break
 
             neighbors_pos = self.get_neighbors(current_node)
+            print(current_node.pos)
+            g_costs = self.calculate_g(neighbors_pos)
 
             for i in range(0, len(neighbors_pos)):
                 if neighbors_pos[i]:
@@ -160,33 +227,33 @@ class PathPlanner():
 
                     # check if already created
                     if any(node == new_node for node in created_set):
-                        print("NODE ALREADY EXISTS")
+                        #print("NODE ALREADY EXISTS")
                         # check if in open set
                         if any(node == new_node for node in open_set):
-                            print("NODE IS IN OPEN SET")
+                            #print("NODE IS IN OPEN SET")
                             # get old node
                             index = open_set.index(new_node)
                             #old_node = open_set[index]
-                            print("Node before change:")
-                            open_set[index].print_attributes()
+                            #print("Node before change:")
+                            #open_set[index].print_attributes()
 
                             # compare past and current g cost
                             old_g = open_set[index].g
-                            new_g = current_node.g + g_cost[i]
+                            new_g = current_node.g + g_costs[i]
 
                             # update the parent if the new g cost is lower. Otherwise, leave alone
                             if (old_g > new_g):
-                                print("UPDATING NODE")
+                                #print("UPDATING NODE")
                                 open_set[index].parent = current_node
                                 open_set[index].g = new_g
 
-                            print("Node after change:")
-                            open_set[index].print_attributes()
+                            #print("Node after change:")
+                            #open_set[index].print_attributes()
                     
                     # if it isn't created, create it
                     else:
                         new_node.parent = current_node
-                        new_node.g = g_cost[i]
+                        new_node.g = g_costs[i]
                         new_node.h = self.calculate_h(pos)
                         open_set.append(new_node)
                         created_set.append(new_node)
@@ -195,7 +262,7 @@ class PathPlanner():
             open_set = sorted(open_set, key=Node.get_f)
 
         # curious to see how many steps it took
-        print("STEPS TO END: {}".format(steps))
+        #print("STEPS TO END: {}".format(steps))
         path = []
         while (current_node != self.start_node):
             path.append(current_node.pos)
@@ -207,6 +274,9 @@ class PathPlanner():
         return path
 
     def plot_path(self, path):
+        """
+        This plots the heatmap with the path overlain. It shows the start and end node and the path in between. Can currently show the startnode's neighbors if you uncomment that section of code. TOOD: Make "if neighbors=True" option when calling this function
+        """
         x = []
         y = []
         for pos in path:
@@ -256,6 +326,12 @@ class PathPlanner():
         path = self.plan_path()
         print("END PATH PLANNING")
         self.plot_path(path)
+        
+        #current_node = Node(pos=[0,0])
+        #neighbors_pos = self.get_neighbors(current_node)
+        #g_costs = self.calculate_g(neighbors_pos)
+        #print(g_costs)
+        #print(type(self.data))
         """
         open_set = self.plan_path()
         for node in open_set:

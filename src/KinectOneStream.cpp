@@ -11,69 +11,42 @@
 -- Contact: Chih-Yao Ma at <cyma@gatech.edu>
 */
 
-//! [headers]
-#include <iostream>
-#include <stdio.h>
-#include <iomanip>
-#include <time.h>
-#include <signal.h>
-#include <opencv2/opencv.hpp>
-
-#include <libfreenect2/libfreenect2.hpp>
-#include <libfreenect2/frame_listener_impl.h>
-#include <libfreenect2/registration.h>
-#include <libfreenect2/packet_pipeline.h>
-#include <libfreenect2/logger.h>
-//! [headers]
+#include "KinectOneStream.h"
 
 using namespace std;
 using namespace cv;
 
-bool protonect_shutdown = false; // Whether the running application should shut down.
+bool bringup(){
+    ROS_INFO("Attempting to connect to Kinect One sensor!");
 
-void sigint_handler(int s)
-{
-  protonect_shutdown = true;
-}
-
-int main()
-{
-    std::cout << "Streaming from Kinect One sensor!" << std::endl;
-
-    //! [context]
-    libfreenect2::Freenect2 freenect2;
-    libfreenect2::Freenect2Device *dev = 0;
-    libfreenect2::PacketPipeline *pipeline = 0;
-    //! [context]
-
-    //! [discovery]
-    if(freenect2.enumerateDevices() == 0)
-    {
-        std::cout << "no device connected!" << std::endl;
+    if(freenect2.enumerateDevices() == 0){
+        ROS_FATAL("No device connected!");
         return -1;
     }
 
     string serial = freenect2.getDefaultDeviceSerialNumber();
 
-    std::cout << "SERIAL: " << serial << std::endl;
+    ROS_INFO("SERIAL: %s", serial.c_str());
 
-    if(pipeline)
-    {
-        //! [open]
+    if(pipeline){
         dev = freenect2.openDevice(serial, pipeline);
-        //! [open]
-    } else {
+    }else{
         dev = freenect2.openDevice(serial);
     }
 
-    if(dev == 0)
-    {
-        std::cout << "failure opening device!" << std::endl;
+    if(dev == 0){
+        ROS_FATAL("failure opening device!");
         return -1;
     }
 
-    signal(SIGINT, sigint_handler);
-    protonect_shutdown = false;
+    return 1;
+}
+
+int main(){
+
+    if(!bringup()){
+        return -1;
+    }
 
     //! [listeners]
     libfreenect2::SyncMultiFrameListener listener(libfreenect2::Frame::Color |
@@ -88,8 +61,8 @@ int main()
     //! [start]
     dev->start();
 
-    std::cout << "device serial: " << dev->getSerialNumber() << std::endl;
-    std::cout << "device firmware: " << dev->getFirmwareVersion() << std::endl;
+    ROS_INFO("Device serial: %s", dev->getSerialNumber().c_str());
+    ROS_INFO("Device firmware: %s", dev->getFirmwareVersion().c_str());
     //! [start]
 
     //! [registration setup]
@@ -100,7 +73,7 @@ int main()
     Mat rgbmat, depthmat, depthmatUndistorted, irmat, rgbd, rgbd2;
 
     //! [loop start]
-    while(!protonect_shutdown)
+    while(ros::ok())
     {
         listener.waitForNewFrame(frames);
         libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
@@ -130,7 +103,6 @@ int main()
         cv::imshow("depth2RGB", rgbd2 / 4096.0f);
 
         int key = cv::waitKey(1);
-        protonect_shutdown = protonect_shutdown || (key > 0 && ((key & 0xFF) == 27)); // shutdown on escape
 
     //! [loop end]
         listener.release(frames);
@@ -144,6 +116,6 @@ int main()
 
     delete registration;
 
-    std::cout << "Streaming Ends!" << std::endl;
+    ROS_INFO("Streaming Ends!");
     return 0;
 }

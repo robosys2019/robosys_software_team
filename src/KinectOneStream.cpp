@@ -95,11 +95,11 @@ void loop(){
 }
 
 void publish(){
-    rgb_msg = cv_bridge::CvImage(std_msgs::Header(), "rgba8", rgbmat).toImageMsg();
+    rgb_msg = cv_bridge::CvImage(std_msgs::Header(), "bgra8", rgbmat).toImageMsg();
     depth_msg = cv_bridge::CvImage(std_msgs::Header(), "32FC1", depthmat).toImageMsg();
     depth_undistorted_msg = cv_bridge::CvImage(std_msgs::Header(), "32FC1", irmat).toImageMsg();
     ir_msg = cv_bridge::CvImage(std_msgs::Header(), "32FC1", depthmatUndistorted).toImageMsg();
-    rgbd_msg = cv_bridge::CvImage(std_msgs::Header(), "rgba8", rgbd).toImageMsg();
+    rgbd_msg = cv_bridge::CvImage(std_msgs::Header(), "bgra8", rgbd).toImageMsg();
 
     rgb_pub.publish(rgb_msg);
     depth_pub.publish(depth_msg);

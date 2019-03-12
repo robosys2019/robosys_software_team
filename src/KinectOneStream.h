@@ -24,7 +24,7 @@ libfreenect2::Frame *undistorted, *registered, *depth2rgb;
 
 cv::Mat rgbmat, depthmat, depthmatUndistorted, irmat, rgbd, rgbd2;
 
-ros:: NodeHandle nh;
+ros::NodeHandle *nh;
 image_transport::ImageTransport *it;
 image_transport::Publisher rgb_pub;
 image_transport::Publisher depth_pub;
@@ -39,7 +39,7 @@ sensor_msgs::ImagePtr ir_msg;
 sensor_msgs::ImagePtr rgbd_msg;
 
 
-bool open_kinect();
+void open_kinect();
 void setup_kinect();
 void setup_ros();
 void loop();

@@ -16,18 +16,21 @@ find_package( OpenCV REQUIRED )
 # For libfreenect2
 find_package( freenect2 REQUIRED HINTS "$ENV{HOME}/freenect2")
 
+catkin_package()
+
 include_directories( include
   ${catkin_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
   ${freenect2_INCLUDE_DIRS}
 )
 
-ADD_EXECUTABLE(KinectOneStream
+add_executable(KinectOneStream
   src/KinectOneStream.cpp
 )
 
-TARGET_LINK_LIBRARIES(KinectOneStream
+target_link_libraries(KinectOneStream
   ${catkin_LIBRARIES}
   ${OpenCV_LIBS}
   ${freenect2_LIBRARIES}
 )
+

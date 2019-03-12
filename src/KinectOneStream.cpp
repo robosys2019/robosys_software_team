@@ -11,15 +11,16 @@
 -- Contact: Chih-Yao Ma at <cyma@gatech.edu>
 */
 
+#include <stdlib.h>
 #include "KinectOneStream.h"
 
 
-bool open_kinect(){
+void open_kinect(){
     ROS_INFO("Attempting to connect to Kinect One sensor!");
 
     if(freenect2.enumerateDevices() == 0){
         ROS_FATAL("No device connected!");
-        return -1;
+        exit(-1);
     }
 
     std::string serial = freenect2.getDefaultDeviceSerialNumber();
@@ -34,10 +35,8 @@ bool open_kinect(){
 
     if(dev == 0){
         ROS_FATAL("failure opening device!");
-        return -1;
+        exit(-1);
     }
-
-    return 1;
 }
 
 void setup_kinect(){
@@ -62,7 +61,7 @@ void setup_kinect(){
 }
 
 void setup_ros(){
-    it = new image_transport::ImageTransport(nh);
+    it = new image_transport::ImageTransport(*nh);
     rgb_pub = it->advertise("camera/image", 1);
     depth_pub = it->advertise("camera/depth", 1);
     depth_undistorted_pub = it->advertise("camera/depth_undistorted", 1);
@@ -113,9 +112,10 @@ int main(int argc, char **argv){
 
     ros::init(argc, argv, "kinect");
 
-    if(!open_kinect()){
-        return -1;
-    }
+    ros::NodeHandle n;
+    nh = &n;
+
+    open_kinect();
 
     setup_kinect();
 

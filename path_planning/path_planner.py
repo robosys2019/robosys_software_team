@@ -53,26 +53,37 @@ class PathPlanner():
         self.data = np.delete(self.data, list(range(0, self.data.shape[1], 2)), axis = 1)
 
         print("CREATING START AND END NODES")
+
         # creating end node with pos, g, and h costs (no parent yet)
+            # get size parameters:
         rows, columns = self.data.shape
-        self.end_x = random.randint(0,columns-1)
-        self.end_y = random.randint(0,rows-1)
+
+            # Different test cases:
+                # random
+        #self.end_x = random.randint(0,columns-1)
+        #self.end_y = random.randint(0,rows-1)
+                # Bottom right corner
         #self.end_x = columns-1
         #self.end_y = rows-1
+                # check obstacle avoidance
+        self.end_x = 20
+        self.end_y = 16
         self.end_node = Node(pos=[self.end_y,self.end_x], g=0, h=0) # pos column/rows, y/x are reversed for ease of calucating h later. TODO: make more clear
 
         # create start node with pos, g, and h costs (no parent ever)
-        self.start_x = random.randint(0,columns-1)
-        self.start_y = random.randint(0,rows-1)
-        #self.start_x = 0
-        #self.start_y = 0
+                # random
+        #self.start_x = random.randint(0,columns-1)
+        #self.start_y = random.randint(0,rows-1)
+                # check obstacle avoidance
+        self.start_x = 0
+        self.start_y = 104
         self.start_node = Node(pos=[self.start_y,self.start_x])
 
     def calculate_h(self, pos):
         # calculate distance from current node to end node
         x = pos[1] # column index
         y = pos[0] # row index
-        h = m.sqrt((x-self.end_x)**2 + (y-self.end_y)**2) * 200 # simple triangle dist formula to end: a^2 + b^2 = c^2
+        h = m.sqrt((x-self.end_x)**2 + (y-self.end_y)**2) * 500 # simple triangle dist formula to end: a^2 + b^2 = c^2
         return h
 
     def calculate_g(self, positions):
@@ -317,8 +328,8 @@ class PathPlanner():
                 x.append(neighbor[1]+.15)
                 y.append(neighbor[0]+.15)
 
-        neighbors = plt.scatter(x, y, marker = 'o', s = 100, color = [0, 0, 1])
-        current = plt.scatter(current_pos[1], current_pos[0], marker = 'o', s = 50, color = [1, .1, .5])
+        neighbors = plt.scatter(x, y, marker = 'o', s = 10, color = [0, 0, 1])
+        current = plt.scatter(current_pos[1], current_pos[0], marker = 'o', s = 5, color = [1, .1, .5])
 
         plt.legend((neighbors, current), ('Neighbors', 'Current'))
 

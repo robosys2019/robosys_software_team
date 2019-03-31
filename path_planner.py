@@ -10,9 +10,23 @@ https://www.redblobgames.com/pathfinding/a-star/introduction.html
 
 """
 """
-STATUS:
-Modifying g cost.
+INPUT:
+- rover pos
 
+TODO:
+Switch to branch with "main" file
+
+- return action & arc
+        - example actions: "GET UNSTUCK" "FOLLOW PATH"
+        - Might only want to pass arc when it detects it has reached the end of the old path
+
+- Compare location to expected location
+- create metrics for movement
+        - What I thnk is happening based on loction history and when to intervene
+- re-format map to lower resolution-- CHANGE THE MAP-MAKER
+- re-format map to slope and set go/no go areas-- CHANGE THE MAP-MAKER
+- plan most efficient path through given 3 points and set target order
+- Think about possible limitting physical cases
 """
 
 from collections import deque
@@ -21,7 +35,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import random
-from opencv_map_maker import Map_Maker
+from map_maker import Map_Maker
 
 class Node():
     def __init__(self, pos=None, parent=None, g=None, h=None):

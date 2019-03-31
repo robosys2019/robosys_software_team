@@ -9,7 +9,7 @@ import seaborn as sns
 
 class Map_Maker():
     def __init__(self):
-        self.data = pd.read_csv('example_map.txt', sep=", |;", header=None, engine='python')
+        self.data = pd.read_csv('mat.txt', sep=", |;", header=None, engine='python')
         #print(self.data)
         self.data = self.data.as_matrix() # convert to numpy array
         #print(self.data)

@@ -20,59 +20,111 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import ndimage
 import cv2
+import numpy as np
 
 class Map_Maker():
     def __init__(self):
-        # read data from pre-made "map" file
-        self.data = pd.read_csv('example_map.txt', sep=", |;", header=None, engine='python')
-        # convert to 2d array
-        self.data = self.data.as_matrix()
+        # initialize np array for map data
+        self.data = []
 
-        # size of map
-        rows, columns = self.data.shape
+    '''
+    Function: set_map
+    Inputs: Np array of depth ranges "map_data"
+    Default: loads box_image map
+    Returns: nothing
 
-        max_length = 10 # length of box in ft
-        max_width = 5 # width of box in ft
-        resolution = .25 # "pixel" size in ft (one value in map array will account for an area of resolution^2)
+    Sets the global variable "self.data" to new map values. Necessary to set before processing any new map with other functions.
+    '''
+    def set_map(self, map_data = np.loadtxt("example_maps/table_image.txt")):
+        self.data = map_data
+        return
 
-        self.new_rows = int(max_length / resolution)
-        self.new_columns = int(max_width / resolution)
+    '''
+    Function: get_new_map
+    Inputs: Box length (ft) "box_len", Box width (ft) "box_width", desired block size (ft) "resolution"
+    Default: 10x5 map with .25ft resolution
+    Returns: Low res map data, either just with slopes or two maps, one with depth and another with slope
 
-    def get_map(self):
-        return self.data
+    By default returns map with lower resolution and slope data instead of depth data
+    If keep_depth_map is True, returns the lowered res map with depth data AND the low res slope map (NECESSARY FOR PLOT_ALL FUNCTION)
+    '''
+    def get_lowres_map(self, box_len=10, box_width=5, resolution=.25, keep_depth_map=False):
+        # determine new desired size of rows/columns based on parameters
+        new_rows = int(box_len / resolution)
+        new_columns = int(box_width / resolution)
 
+        # resize map with new sizes
+        resized_map = cv2.resize(self.data, (new_columns, new_rows))
+        # run "edge detection" on map for slope data
+        sobeled_map = self.sobel_filter_data(resized_map)
+
+        if keep_depth_map:
+            return resized_map, sobeled_map
+        else:
+            return sobeled_map
+
+    '''
+    Function: plot_data
+    Inputs: None
+    Returns: nothing
+
+    plots the full res depth map set by function set_map
+    '''
     def plot_data(self):
         # plot heat map
         sns.heatmap(self.data, cmap="YlGnBu")
         plt.show()
 
+    '''
+    Function: sobel_filter_data
+    Inputs: data
+    Returns: Filtered data
+
+    Uses a sobel filter to calculate slopes from depths
+    '''
     def sobel_filter_data(self, data):
         # sobel filter is an edge detector, but might work for slopes
         sobeled_img = ndimage.sobel(data)
         return sobeled_img
 
+    '''
+    Function: plot_all
+    Inputs: None
+    Returns: Nothing
+
+    Plots 4 heatmaps of original data (depth and slope) and low res data (depth and slope)
+    '''
     def plot_all(self):
         # plot normal and changed data
         # setup matplotlib fig
         f, axes = plt.subplots(2, 2, sharex=True)
         sns.despine(left=True) # what does this do?
 
-        # plot heatmaps
+        # plot heatmaps of full res and full res edge detected data
         sns.heatmap(self.data, cmap="YlGnBu", ax=axes[0, 0])
         sns.heatmap(self.sobel_filter_data(self.data), cmap="YlGnBu", ax=axes[0, 1])
         
-        new_map = cv2.resize(self.data, (self.new_columns, self.new_rows))
-        new_sobel = self.sobel_filter_data(new_map)
+        # get lower res maps
+        new_map, new_sobel = self.get_lowres_map(keep_depth_map=True)
 
+        # plot heatmaps of lower res maps (reg and sobel)
         sns.heatmap(new_map, cmap="YlGnBu", ax=axes[1, 0])
         sns.heatmap(new_sobel, cmap="YlGnBu", ax=axes[1, 1])
 
         plt.show()
 
+    '''
+    Function: run
+    Inputs: none
+    Returns: nothing
+
+    If map_maker is run, processes a test file (default in set_map) and plots 4 heatmaps
+    '''
     def run(self):
+        self.set_map()
         self.plot_all()
         return
 
 if __name__ == '__main__':
-    code = Map_Maker()
-    code.run()
+    node = Map_Maker()
+    node.run()

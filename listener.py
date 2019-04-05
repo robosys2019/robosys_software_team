@@ -10,7 +10,7 @@ from sensor_msgs.msg import Image
 
 
 class KinectSubscriber:
-    def __init__(self, show = True):
+    def __init__(self, show = False):
         self.bridge = CvBridge()
         self.depth_image_sub = rospy.Subscriber("/camera/depth_undistorted", Image, self.depth_callback, queue_size=1)
         self.image_sub = rospy.Subscriber("/camera/image", Image, self.rgb_callback, queue_size=1)
@@ -51,3 +51,13 @@ class KinectSubscriber:
             cv2.imshow("RGB Image Window", cv_image)
 
         cv2.waitKey(3)
+
+if __name__ == '__main__':
+    ic = KinectSubscriber(show=True)
+    rospy.init_node('kinect_subscriber', anonymous=True)
+    try:
+        rospy.spin()
+    except KeyboardInterrupt:
+        print("Shutting down")
+        cv2.destroyAllWindows()
+

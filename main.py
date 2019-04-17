@@ -13,28 +13,13 @@ import signal
 
 from listener import KinectSubscriber
 from map_builder import MapBuilder
-<<<<<<< HEAD
-from map_maker import MapMaker
-=======
 from marker_detector import MarkerDetector
->>>>>>> c0e68cd915d8dd173bc31d00acc51458501d754a
 
 run = True
 
 class RoboSys:
     def __init__(self):
         self.listener = KinectSubscriber()
-<<<<<<< HEAD
-        #self.map_builder = MapBuilder()
-        self.map_maker = MapMaker()
-
-    def listen(self):
-        try:
-            rospy.init_node('KinectSubscriber', anonymous=True)
-        except KeyboardInterrupt:
-            print("Shutting down")
-            cv2.destroyAllWindows()
-=======
         self.map_builder = MapBuilder()
         self.marker_detector = MarkerDetector()
         self.map_data = []
@@ -45,7 +30,6 @@ class RoboSys:
         run = False
         print("Shutting down")
         cv2.destroyAllWindows()
->>>>>>> c0e68cd915d8dd173bc31d00acc51458501d754a
     
     def run(self):
         rospy.init_node('KinectSubscriber', anonymous=True)

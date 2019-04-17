@@ -118,8 +118,6 @@ class MapMaker():
     for testing purposes. seeing if I can manipulate test data.
     '''
     def calibrate_map(self):
-        
-
         return
 
     '''
@@ -131,7 +129,7 @@ class MapMaker():
     '''
     def run(self):
         self.set_map()
-        calibrate_map()
+        #calibrate_map()
         self.plot_all()
         return
 

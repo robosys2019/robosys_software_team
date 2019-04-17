@@ -10,12 +10,14 @@ from sensor_msgs.msg import Image
 
 from listener import KinectSubscriber
 from map_builder import MapBuilder
+from map_maker import MapMaker
 
 
 class RoboSys:
     def __init__(self):
         self.listener = KinectSubscriber()
-        self.map_builder = MapBuilder()
+        #self.map_builder = MapBuilder()
+        self.map_maker = MapMaker()
 
     def listen(self):
         try:

@@ -35,7 +35,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import random
-from map_maker import Map_Maker
+from map_maker import MapMaker
 
 class Node():
     def __init__(self, pos=None, parent=None, g=None, h=None):
@@ -58,8 +58,8 @@ class PathPlanner():
     def __init__(self):
         print("LOADING MAP")
         # map of costs (2d array)
-        new_map = Map_Maker()
-        self.data = new_map.get_map()
+        new_map = MapMaker()
+        self.data = new_map.get_lowres_map()
         self.data = np.delete(self.data, list(range(0, self.data.shape[0], 2)), axis = 0)
         self.data = np.delete(self.data, list(range(0, self.data.shape[1], 2)), axis = 1)
 

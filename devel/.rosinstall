@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/charlie/catkin_ws/src/robosys_software_team/devel/setup.sh

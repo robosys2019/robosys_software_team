@@ -1,18 +1,14 @@
 """
-takes an opencv map (mat file) and makes 2d map
-IMPORTANT NOTE: Had to do weird thing to bash file to get opencv to work. may not run ros in this directory now. https://stackoverflow.com/questions/43019951/after-install-ros-kinetic-cannot-import-opencv
-UPDATE: That didn't work at all. No idea what I deleted. currently trying to install opencv differently here; https://www.pyimagesearch.com/2016/10/24/ubuntu-16-04-how-to-install-opencv/
+This is built to make a one-time map for the full mission. It takes data from the kinect (as a numpy array) and returns a lower res slope map.
+***UNITS ARE IN FEET IN THE MAP***
 
-
-TODO:
-take map (np array) as input and return prettied-up version
-    - for now, it's initialized with a pre-existing map
-
-Steps to modify map:
-- lower resolution
-- reformat to slope map
-- set go/no go areas
-
+It has the functions:
+- set_map (YOU MUST DO THIS to get an accurate lowres map back)
+- get_lowres_map (returns a low res slope map from set_map)
+- plot_data (plots the raw map given in set_map)
+- sobel_filter_data (transforms depth data to slope data)
+- plot_all (plots high res map with depth and slope data, then low res map with depth and slope data)
+- run
 """
 
 import pandas as pd
@@ -22,7 +18,7 @@ from scipy import ndimage
 import cv2
 import numpy as np
 
-class Map_Maker():
+class MapMaker():
     def __init__(self):
         # initialize np array for map data
         self.data = []
@@ -30,12 +26,15 @@ class Map_Maker():
     '''
     Function: set_map
     Inputs: Np array of depth ranges "map_data"
-    Default: loads box_image map
+    Default: loads image from example_maps folder. Options:
+        (pd.read_csv('example_maps/bad.txt', sep=", |;", header=None, engine='python')).as_matrix()
+        np.loadtxt("example_maps/table_image.txt"))
+        np.loadtxt("example_maps/box_image.txt"))
     Returns: nothing
 
     Sets the global variable "self.data" to new map values. Necessary to set before processing any new map with other functions.
     '''
-    def set_map(self, map_data = np.loadtxt("example_maps/table_image.txt")):
+    def set_map(self, map_data = np.loadtxt("example_maps/box_image.txt")):
         self.data = map_data
         return
 
@@ -48,7 +47,7 @@ class Map_Maker():
     By default returns map with lower resolution and slope data instead of depth data
     If keep_depth_map is True, returns the lowered res map with depth data AND the low res slope map (NECESSARY FOR PLOT_ALL FUNCTION)
     '''
-    def get_lowres_map(self, box_len=10, box_width=5, resolution=.25, keep_depth_map=False):
+    def get_lowres_map(self, box_len=16, box_width=7.75, resolution=.66, keep_depth_map=False):
         # determine new desired size of rows/columns based on parameters
         new_rows = int(box_len / resolution)
         new_columns = int(box_width / resolution)
@@ -114,6 +113,16 @@ class Map_Maker():
         plt.show()
 
     '''
+    Function: mess_with_example_map(self):
+
+    for testing purposes. seeing if I can manipulate test data.
+    '''
+    def calibrate_map(self):
+        
+
+        return
+
+    '''
     Function: run
     Inputs: none
     Returns: nothing
@@ -122,9 +131,10 @@ class Map_Maker():
     '''
     def run(self):
         self.set_map()
+        calibrate_map()
         self.plot_all()
         return
 
 if __name__ == '__main__':
-    node = Map_Maker()
+    node = MapMaker()
     node.run()

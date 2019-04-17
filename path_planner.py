@@ -14,6 +14,7 @@ INPUT:
 - rover pos
 
 TODO:
+NOTE: WILL NEED TO CHANGE INITILIAZATIONS FOR COMPATIBILITY WITH MAIN
 Switch to branch with "main" file
 
 - return action & arc
@@ -59,12 +60,8 @@ class PathPlanner():
         print("LOADING MAP")
         # map of costs (2d array)
         new_map = MapMaker()
+        new_map.set_map()
         self.data = new_map.get_lowres_map()
-        self.data = np.delete(self.data, list(range(0, self.data.shape[0], 2)), axis = 0)
-        self.data = np.delete(self.data, list(range(0, self.data.shape[1], 2)), axis = 1)
-
-        self.data = np.delete(self.data, list(range(0, self.data.shape[0], 2)), axis = 0)
-        self.data = np.delete(self.data, list(range(0, self.data.shape[1], 2)), axis = 1)
 
         print("CREATING START AND END NODES")
 
@@ -77,11 +74,11 @@ class PathPlanner():
         #self.end_x = random.randint(0,columns-1)
         #self.end_y = random.randint(0,rows-1)
                 # Bottom right corner
-        #self.end_x = columns-1
-        #self.end_y = rows-1
+        self.end_x = columns-1
+        self.end_y = rows-1
                 # check obstacle avoidance
-        self.end_x = 20
-        self.end_y = 16
+        #self.end_x = 20
+        #self.end_y = 16
         self.end_node = Node(pos=[self.end_y,self.end_x], g=0, h=0) # pos column/rows, y/x are reversed for ease of calucating h later. TODO: make more clear
 
         # create start node with pos, g, and h costs (no parent ever)
@@ -90,7 +87,7 @@ class PathPlanner():
         #self.start_y = random.randint(0,rows-1)
                 # check obstacle avoidance
         self.start_x = 0
-        self.start_y = 104
+        self.start_y = 2
         self.start_node = Node(pos=[self.start_y,self.start_x])
 
     def calculate_h(self, pos):
@@ -102,6 +99,7 @@ class PathPlanner():
 
     def calculate_g(self, positions):
         """
+        Takes list of neighbors and returns an array of weights to match them (the first weight is for the first neighbor, second to the second, etc.)
         calculates g cost with combo of 
         """
         # Generic g cost from current to neighboring points
@@ -112,7 +110,7 @@ class PathPlanner():
         # add weight of value (slope) in array
         slope_weight = []
         ##print(positions)
-        
+
         for i in range(0,len(positions)):
             current_pos = positions[i]
             if current_pos: # If the position exists

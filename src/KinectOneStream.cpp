@@ -55,18 +55,13 @@ void setup_kinect(){
 
     registration = new libfreenect2::Registration(dev->getIrCameraParams(), dev->getColorCameraParams());
     undistorted = new libfreenect2::Frame(512, 424, 4);
-    registered = new libfreenect2::Frame(512, 424, 4);
-    depth2rgb = new libfreenect2::Frame(1920, 1080 + 2, 4);
 
 }
 
 void setup_ros(){
     it = new image_transport::ImageTransport(*nh);
     rgb_pub = it->advertise("camera/image", 1);
-    depth_pub = it->advertise("camera/depth", 1);
     depth_undistorted_pub = it->advertise("camera/depth_undistorted", 1);
-    ir_pub = it->advertise("camera/ir", 1);
-    rgbd_pub = it->advertise("camera/imaged", 1);
 }
 
 void loop(){
@@ -74,18 +69,13 @@ void loop(){
     {
         listener->waitForNewFrame(frames);
         libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
-        libfreenect2::Frame *ir = frames[libfreenect2::Frame::Ir];
         libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
 
         cv::Mat(rgb->height, rgb->width, CV_8UC4, rgb->data).copyTo(rgbmat);
-        cv::Mat(ir->height, ir->width, CV_32FC1, ir->data).copyTo(irmat);
-        cv::Mat(depth->height, depth->width, CV_32FC1, depth->data).copyTo(depthmat);
 
-        registration->apply(rgb, depth, undistorted, registered, true, depth2rgb);
+        registration->undistortDepth(depth, undistorted);
 
         cv::Mat(undistorted->height, undistorted->width, CV_32FC1, undistorted->data).copyTo(depthmatUndistorted);
-        cv::Mat(registered->height, registered->width, CV_8UC4, registered->data).copyTo(rgbd);
-        cv::Mat(depth2rgb->height, depth2rgb->width, CV_32FC1, depth2rgb->data).copyTo(rgbd2);
 
         publish();
         ros::spinOnce();
@@ -96,16 +86,10 @@ void loop(){
 
 void publish(){
     rgb_msg = cv_bridge::CvImage(std_msgs::Header(), "bgra8", rgbmat).toImageMsg();
-    depth_msg = cv_bridge::CvImage(std_msgs::Header(), "32FC1", depthmat).toImageMsg();
-    depth_undistorted_msg = cv_bridge::CvImage(std_msgs::Header(), "32FC1", irmat).toImageMsg();
-    ir_msg = cv_bridge::CvImage(std_msgs::Header(), "32FC1", depthmatUndistorted).toImageMsg();
-    rgbd_msg = cv_bridge::CvImage(std_msgs::Header(), "bgra8", rgbd).toImageMsg();
+    depth_undistorted_msg = cv_bridge::CvImage(std_msgs::Header(), "32FC1", depthmatUndistorted).toImageMsg();
 
     rgb_pub.publish(rgb_msg);
-    depth_pub.publish(depth_msg);
     depth_undistorted_pub.publish(depth_undistorted_msg);
-    ir_pub.publish(ir_msg);
-    rgbd_pub.publish(rgbd_msg);
 }
 
 int main(int argc, char **argv){
@@ -129,8 +113,6 @@ int main(int argc, char **argv){
     delete registration;
     delete listener;
     delete undistorted;
-    delete registered;
-    delete depth2rgb;
 
     ROS_INFO("Streaming Ends!");
     return 0;

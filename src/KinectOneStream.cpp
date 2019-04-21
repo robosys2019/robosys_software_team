@@ -65,6 +65,7 @@ void setup_ros(){
 }
 
 void loop(){
+    ros::Rate r(2); // 2 Hz
     while(ros::ok())
     {
         listener->waitForNewFrame(frames);
@@ -81,6 +82,7 @@ void loop(){
         ros::spinOnce();
 
         listener->release(frames);
+        r.sleep();
     }
 }
 

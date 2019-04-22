@@ -15,7 +15,6 @@ INPUT:
 
 TODO:
 NOTE: WILL NEED TO CHANGE INITILIAZATIONS FOR COMPATIBILITY WITH MAIN
-Switch to branch with "main" file
 
 - return action & arc
         - example actions: "GET UNSTUCK" "FOLLOW PATH"
@@ -24,10 +23,10 @@ Switch to branch with "main" file
 - Compare location to expected location
 - create metrics for movement
         - What I thnk is happening based on loction history and when to intervene
-- re-format map to lower resolution-- CHANGE THE MAP-MAKER
 - re-format map to slope and set go/no go areas-- CHANGE THE MAP-MAKER
 - plan most efficient path through given 3 points and set target order
 - Think about possible limitting physical cases
+
 """
 
 from collections import deque
@@ -55,47 +54,108 @@ class Node():
     def __eq__(self, other):
         return self.pos == other.pos
 
+"""
+PathPlanner functions:
+- set_map
+    - sets global variable 'self.map'
+- set_start_node
+    - sets global variable 'self.start_node'
+- set_end_node
+    - sets global variable 'self.end_node'
+- calculate_h
+    - returns cost from current node to goal
+- calculate_g
+    - returns g cost from current to neighbor
+- get_neighbors
+    - returns list of neighboring nodes
+- plan_path
+    - Plans a path from self.start_node to self.end_node using A*
+- initialize_plot
+    - starts heat map of map with start and end nodes overlaid. Path is drawn over this in other functions. Called by plan_path
+- update_plot
+    - Overlays scatter plot with current node and neighbors over initialized plot. Called by plan_path
+- plot_final_path
+    - Plots the map with path overlain. Shows start and end nodes and the path in between.
+- run
+"""
+
 class PathPlanner():
     def __init__(self):
-        print("LOADING MAP")
-        # map of costs (2d array)
-        new_map = MapMaker()
-        new_map.set_map()
-        self.data = new_map.get_lowres_map()
+        self.map = []
+        self.start_node = None
+        self.end_node = None
 
-        print("CREATING START AND END NODES")
+    '''
+    Function: set_map
+    Inputs: map (ndarray)
+    Default: None
+    Returns: None
+    Calls: None
+    Notes: Sets global variable 'self.map'
+    '''
 
-        # creating end node with pos, g, and h costs (no parent yet)
-            # get size parameters:
-        rows, columns = self.data.shape
+    def set_map(self, map):
+        print("PathPlanner: RECEIVED MAP")
+        self.map = map
+        return
 
-            # Different test cases:
-                # random
-        #self.end_x = random.randint(0,columns-1)
-        #self.end_y = random.randint(0,rows-1)
-                # Bottom right corner
-        self.end_x = columns-1
-        self.end_y = rows-1
-                # check obstacle avoidance
-        #self.end_x = 20
-        #self.end_y = 16
-        self.end_node = Node(pos=[self.end_y,self.end_x], g=0, h=0) # pos column/rows, y/x are reversed for ease of calucating h later. TODO: make more clear
+    '''
+    Function: set_start_node
+    Inputs: start_node (Node)
+    Default: start_node = node with position 0,0
+    Returns: None
+    Calls: None
+    Notes: Sets global variable 'start_node'
+    '''
 
-        # create start node with pos, g, and h costs (no parent ever)
-                # random
-        #self.start_x = random.randint(0,columns-1)
-        #self.start_y = random.randint(0,rows-1)
-                # check obstacle avoidance
-        self.start_x = 0
-        self.start_y = 2
-        self.start_node = Node(pos=[self.start_y,self.start_x])
+    def set_start_node(self, start_node=Node(pos=[0,0])):
+        print("PathPlanner: SETTING START NODE")
+        self.start_node = start_node
+        return
+
+    '''
+    Function: set_end_node
+    Inputs: end_node (Node)
+    Default: end_node = node with position 10,10
+    Returns: None
+    Calls: None
+    Notes: Sets global variable 'end_node'
+    '''
+
+    def set_end_node(self, end_node=Node(pos=[10,10])):
+        print("PathPlanner: SETTING END NODE")
+        self.end_node = end_node
+        return
+
+    '''
+    Function: calculate_h
+    Inputs: pos (tuple)
+    Default: None
+    Returns: h (distance from current node to end node)
+    Calls: self.end_node
+    Notes: Returns cost from current node to goal
+    '''
 
     def calculate_h(self, pos):
         # calculate distance from current node to end node
         x = pos[1] # column index
         y = pos[0] # row index
-        h = m.sqrt((x-self.end_x)**2 + (y-self.end_y)**2) * 500 # simple triangle dist formula to end: a^2 + b^2 = c^2
+
+        end_x = self.end_node.pos[1]
+        end_y = self.end_node.pos[0]
+
+        h = m.sqrt((x-end_x)**2 + (y-end_y)**2) * 500 # simple triangle dist formula to end: a^2 + b^2 = c^2
         return h
+
+    '''
+    Function: calculate_g
+    Inputs: positions (list of position tuples)
+    Default: None
+    Returns: total_g (list of g cost for each pos given)
+    Calls: self.map
+    Notes: cost currently calculated based on slop
+    TODO: modify to correct cost calculations
+    '''
 
     def calculate_g(self, positions):
         """
@@ -114,7 +174,7 @@ class PathPlanner():
         for i in range(0,len(positions)):
             current_pos = positions[i]
             if current_pos: # If the position exists
-                slope = self.data[current_pos[0],current_pos[1]]
+                slope = self.map[current_pos[0],current_pos[1]]
                 slope_weight.append(slope)
             else:
                 slope_weight.append(0)
@@ -122,6 +182,15 @@ class PathPlanner():
         total_g = np.add(generic_cost,slope_weight)
         ##print(total_g)
         return total_g
+
+    '''
+    Function: get_neighbors
+    Inputs: node (Node)
+    Default: None
+    Returns: neighbors (list of Nodes)
+    Calls: self.map
+    Notes: Returns positions of currect node's neighbors in 1d array from top left to bottom right. Deals with corner, edge, and general cases.
+    '''
 
     def get_neighbors(self, node):
         """
@@ -134,7 +203,7 @@ class PathPlanner():
         col = node.pos[1]
 
         # get max dimensions of map for corner cases
-        max_row, max_column = self.data.shape
+        max_row, max_column = self.map.shape
 
         # EDGE CASES
         # top row
@@ -202,13 +271,26 @@ class PathPlanner():
 
         return neighbors
 
-    def plan_path(self):
+    '''
+    Function: plan_path
+    Inputs: None
+    Default: plot_path = False (won't plot path in progress)
+    Returns: path (list of Nodes from start to end)
+    Calls: se;f.initialize_plot(), self.start_node, self.get_neighbors(), self.calculate_g(), self.calculate_h(), self.update_plot(), self.end_node
+    Notes: Plans a path from self.start_node to self.end_node using A*
+    '''
+
+    def plan_path(self, plot_path=False):
         """
         This plans a path using A*
         It calls get_neighbors to obtain the neighbors of the current node
         It calls calculate_g_cost to obtain the g cost for the neighboring points.
         """
-        print("BEGIN PATH PLANNING")
+
+        print("PathPlanner: BEGIN PATH PLANNING")
+        if plot_path:
+            print("PathPlanner: PLOTTING PATH")
+            self.initialize_plot()
 
         # INITIALIZE NODE SETS
         open_set = [] # contains unvisited nodes in cost order by f (lowest to the left)
@@ -239,7 +321,8 @@ class PathPlanner():
         # PLAN PATH
         steps = 0
         while (len(open_set) > 0):
-            self.update_plot(current_pos = current_node.pos, neighbors_pos = neighbors_pos)
+            if plot_path:
+                self.update_plot(current_pos = current_node.pos, neighbors_pos = neighbors_pos)
 
             current_node = open_set[0]
             # remove current node from open set
@@ -309,9 +392,18 @@ class PathPlanner():
         path = path[::-1]
         return path
 
+    '''
+    Function: initialize_plot
+    Inputs: None
+    Default: None
+    Returns: None
+    Calls: self.map, self.start_node, self.end_node
+    Notes: Makes heat map of map with start and end nodes overlaid. The path is later drawn over this.
+    '''
+
     def initialize_plot(self):
         print("INITIALIZING PLOT")
-        sns.heatmap(self.data, cmap="YlGnBu")
+        sns.heatmap(self.map, cmap="YlGnBu")
 
         thickness = 100
 
@@ -328,6 +420,15 @@ class PathPlanner():
         # will need to comment this out if you choose to plot neighbors
         plt.legend((start, end), ('Start', 'End'))
         return
+
+    '''
+    Function: update_plot
+    Inputs: current_pos, neighbors_pos
+    Default: None
+    Returns: None
+    Calls: None
+    Notes: Overlays scatter plot with current node and neighbors over initialized plot
+    '''
 
     def update_plot(self, current_pos, neighbors_pos):
         """
@@ -348,11 +449,20 @@ class PathPlanner():
         plt.pause(0.05)
         return
 
+    '''
+    Function: plot_final_path
+    Inputs: path (list of nodes)
+    Default: None
+    Returns: None
+    Calls: self.map, self.start_node, self.end_node
+    Notes: Plots the map with path overlain. Shows start and end nodes and the path in between.
+    '''
+
     def plot_final_path(self, path):
         """
-        This plots the heatmap with the path overlain. It shows the start and end node and the path in between. Can currently show the startnode's neighbors if you uncomment that section of code. TOOD: Make "if neighbors=True" option when calling this function
+        This plots the heatmap with the path overlain. It shows the start and end node and the path in between.
         """
-        print("PLOTTING FINAL PATH")
+        print("PLOTTING FINAL PATH")        
         x = []
         y = []
         for pos in path:
@@ -360,7 +470,7 @@ class PathPlanner():
             y.append(pos[0]+.5)
 
         # plot heat map
-        sns.heatmap(self.data, cmap="YlGnBu")
+        sns.heatmap(self.map, cmap="YlGnBu")
 
         thickness = 100
 
@@ -377,20 +487,38 @@ class PathPlanner():
         # plot path
         path = plt.scatter(x, y, marker='o', s=thickness, color=[1, .5, 0])
 
-        # will need to comment this out if you choose to plot neighbors
         plt.legend((start, end, path), ('Start', 'End', 'Path'))
 
         plt.show()
+        return
+
+    '''
+    Function: 
+    Inputs:
+    Default:
+    Returns:
+    Calls:
+    Notes:
+    '''
 
     def run(self):
         print("BEGIN")
         #TODO: Call plan_path and plot_path
-        self.initialize_plot()
-        path = self.plan_path()
+        path = self.plan_path(plot_path=False)
         self.plot_final_path(path)
         print("END")
         #self.plot_path(path)
 
 if __name__ == '__main__':
-    code = PathPlanner()
-    code.run()
+    path_planner = PathPlanner()
+
+    # will need a map:
+    map_maker = MapMaker()
+    map_maker.set_map()
+    lowres_map = map_maker.get_lowres_map()
+    path_planner.set_map(lowres_map)
+    
+    path_planner.set_start_node()
+    path_planner.set_end_node()
+
+    path_planner.run()

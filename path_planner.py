@@ -14,7 +14,6 @@ INPUT:
 - rover pos
 
 TODO:
-NOTE: WILL NEED TO CHANGE INITILIAZATIONS FOR COMPATIBILITY WITH MAIN
 
 - return action & arc
         - example actions: "GET UNSTUCK" "FOLLOW PATH"
@@ -29,6 +28,8 @@ NOTE: WILL NEED TO CHANGE INITILIAZATIONS FOR COMPATIBILITY WITH MAIN
 
 """
 
+
+
 from collections import deque
 import math as m
 import numpy as np
@@ -37,8 +38,16 @@ import seaborn as sns
 import random
 from map_maker import MapMaker
 
+"""
+Node functions:
+TODO
+
+Notes:
+- Origin of map is in the bottom left corner. X goes to the right, Y goes up. However, pos goes [row, column] from top left corner. I'm dealing with this by creating coordinate varialbes in the Node class, different from pos variables which tell you the pos in the map array.
+"""
+
 class Node():
-    def __init__(self, pos=None, parent=None, g=None, h=None):
+    def __init__(self, pos=None, parent=None, g=None, h=None, size_map=[7.75, 16]):
         self.pos = pos
         self.parent = parent
         self.g = g
@@ -50,6 +59,42 @@ class Node():
     def print_attributes(self):
         f = self.get_f()
         print("POS: {}, PARENT: {}, G: {}, H: {}, F: {}".format(self.pos, self.parent, self.g, self.h, f))
+
+    def coordinates_from_pos(self, map_array_size, real_map_size_ft=[7.75, 16]):
+        # real map size in [x,y] (bottom left origin)
+        real_map_x = real_map_size_ft[0]
+        real_map_y = real_map_size_ft[1]
+        # map array size in [rows, columns] - corresponds to y,x. Translated to same coordinate frame:
+        map_array_x = map_array_size[1]
+        map_array_y = map_array_size[0]
+
+        # divide feet by array size
+        x_multiplier = real_map_x / map_array_x
+        y_multiplier = real_map_y / map_array_y
+
+        # translate array indeces to real life coordinates
+        real_x = self.pos[1] * x_multiplier
+        real_y = (map_array_y - self.pos[0]) * y_multiplier
+
+        return real_x, real_y
+
+    def pos_from_coordinates(self, coordinates, map_array_size, real_map_size_ft=[7.75, 16]):
+        # real map size in [x,y] (bottom left origin)
+        real_map_x = real_map_size_ft[0]
+        real_map_y = real_map_size_ft[1]
+        # map array size in [rows, columns] - corresponds to y,x. Translated to same coordinate frame:
+        map_array_x = map_array_size[1] - 1
+        map_array_y = map_array_size[0] - 1
+
+        # divide array size by feet
+        row_multiplier = map_array_y / real_map_y
+        col_multiplier = map_array_x / real_map_x
+
+        # translate coordinates to array indeces
+        row = int((real_map_size_ft[1] - coordinates[1]) * row_multiplier)
+        col = int(coordinates[0] * col_multiplier)
+
+        return row, col
 
     def __eq__(self, other):
         return self.pos == other.pos
@@ -77,6 +122,10 @@ PathPlanner functions:
 - plot_final_path
     - Plots the map with path overlain. Shows start and end nodes and the path in between.
 - run
+
+Notes:
+- Origin of map is in the bottom left corner. X goes to the right, Y goes up. However, pos goes [row, column] from top left corner. 
+
 """
 
 class PathPlanner():
@@ -101,30 +150,34 @@ class PathPlanner():
 
     '''
     Function: set_start_node
-    Inputs: start_node (Node)
-    Default: start_node = node with position 0,0
+    Inputs: Real life coordinates of start [x,y]
+    Default: start_node = node with real life coordinate 0,0
     Returns: None
-    Calls: None
+    Calls: Node.pos_from_coordinates
     Notes: Sets global variable 'start_node'
     '''
 
-    def set_start_node(self, start_node=Node(pos=[0,0])):
+    def set_start_node(self, coordinates=[0,0]):
         print("PathPlanner: SETTING START NODE")
-        self.start_node = start_node
+        self.start_node = Node()
+        row, col = self.start_node.pos_from_coordinates(coordinates=coordinates, map_array_size = self.map.shape)
+        self.start_node.pos = [row, col]
         return
 
     '''
     Function: set_end_node
-    Inputs: end_node (Node)
-    Default: end_node = node with position 10,10
+    Inputs: Real life coordinates of target [x,y]
+    Default: end_node = node with real life coordinate 7.75, 16 (assume map size 7.75, 16 ft)
     Returns: None
     Calls: None
     Notes: Sets global variable 'end_node'
     '''
 
-    def set_end_node(self, end_node=Node(pos=[10,10])):
+    def set_end_node(self, coordinates=[7.75,16]):
         print("PathPlanner: SETTING END NODE")
-        self.end_node = end_node
+        self.end_node = Node()
+        row, col = self.end_node.pos_from_coordinates(coordinates=coordinates, map_array_size = self.map.shape)
+        self.end_node.pos = [row, col]
         return
 
     '''
@@ -399,6 +452,7 @@ class PathPlanner():
     Returns: None
     Calls: self.map, self.start_node, self.end_node
     Notes: Makes heat map of map with start and end nodes overlaid. The path is later drawn over this.
+    start_x and start_y correspond to col, row indeces, as do end_x and end_y
     '''
 
     def initialize_plot(self):
@@ -428,6 +482,7 @@ class PathPlanner():
     Returns: None
     Calls: None
     Notes: Overlays scatter plot with current node and neighbors over initialized plot
+    x and y correspond to col, row indeces
     '''
 
     def update_plot(self, current_pos, neighbors_pos):
@@ -456,6 +511,7 @@ class PathPlanner():
     Returns: None
     Calls: self.map, self.start_node, self.end_node
     Notes: Plots the map with path overlain. Shows start and end nodes and the path in between.
+    start_x and start_y correspond to col, row indeces, as do end_x and end_y
     '''
 
     def plot_final_path(self, path):
@@ -515,9 +571,10 @@ if __name__ == '__main__':
     # will need a map:
     map_maker = MapMaker()
     map_maker.set_map()
+    map_maker.calibrate_map()
     lowres_map = map_maker.get_lowres_map()
+
     path_planner.set_map(lowres_map)
-    
     path_planner.set_start_node()
     path_planner.set_end_node()
 

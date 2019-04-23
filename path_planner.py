@@ -37,6 +37,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import random
 from map_maker import MapMaker
+import math
 
 """
 Node functions:
@@ -59,42 +60,6 @@ class Node():
     def print_attributes(self):
         f = self.get_f()
         print("POS: {}, PARENT: {}, G: {}, H: {}, F: {}".format(self.pos, self.parent, self.g, self.h, f))
-
-    def coordinates_from_pos(self, map_array_size, real_map_size_ft=[7.75, 16]):
-        # real map size in [x,y] (bottom left origin)
-        real_map_x = real_map_size_ft[0]
-        real_map_y = real_map_size_ft[1]
-        # map array size in [rows, columns] - corresponds to y,x. Translated to same coordinate frame:
-        map_array_x = map_array_size[1]
-        map_array_y = map_array_size[0]
-
-        # divide feet by array size
-        x_multiplier = real_map_x / map_array_x
-        y_multiplier = real_map_y / map_array_y
-
-        # translate array indeces to real life coordinates
-        real_x = self.pos[1] * x_multiplier
-        real_y = (map_array_y - self.pos[0]) * y_multiplier
-
-        return real_x, real_y
-
-    def pos_from_coordinates(self, coordinates, map_array_size, real_map_size_ft=[7.75, 16]):
-        # real map size in [x,y] (bottom left origin)
-        real_map_x = real_map_size_ft[0]
-        real_map_y = real_map_size_ft[1]
-        # map array size in [rows, columns] - corresponds to y,x. Translated to same coordinate frame:
-        map_array_x = map_array_size[1] - 1
-        map_array_y = map_array_size[0] - 1
-
-        # divide array size by feet
-        row_multiplier = map_array_y / real_map_y
-        col_multiplier = map_array_x / real_map_x
-
-        # translate coordinates to array indeces
-        row = int((real_map_size_ft[1] - coordinates[1]) * row_multiplier)
-        col = int(coordinates[0] * col_multiplier)
-
-        return row, col
 
     def __eq__(self, other):
         return self.pos == other.pos
@@ -123,6 +88,12 @@ PathPlanner functions:
     - Plots the map with path overlain. Shows start and end nodes and the path in between.
 - run
 
+More:
+- pos_from_coordinates
+- coordinates_from_pos
+- update_status
+
+
 Notes:
 - Origin of map is in the bottom left corner. X goes to the right, Y goes up. However, pos goes [row, column] from top left corner. 
 
@@ -133,6 +104,8 @@ class PathPlanner():
         self.map = []
         self.start_node = None
         self.end_node = None
+        self.path = None
+        self.real_map_size = [7.75, 15] # size in feet of map. 
 
     '''
     Function: set_map
@@ -159,9 +132,8 @@ class PathPlanner():
 
     def set_start_node(self, coordinates=[0,0]):
         print("PathPlanner: SETTING START NODE")
-        self.start_node = Node()
-        row, col = self.start_node.pos_from_coordinates(coordinates=coordinates, map_array_size = self.map.shape)
-        self.start_node.pos = [row, col]
+        row, col = self.pos_from_coordinates(coordinates=coordinates)
+        self.start_node = Node(pos=[row, col])
         return
 
     '''
@@ -175,9 +147,8 @@ class PathPlanner():
 
     def set_end_node(self, coordinates=[7.75,16]):
         print("PathPlanner: SETTING END NODE")
-        self.end_node = Node()
-        row, col = self.end_node.pos_from_coordinates(coordinates=coordinates, map_array_size = self.map.shape)
-        self.end_node.pos = [row, col]
+        row, col = self.pos_from_coordinates(coordinates=coordinates)
+        self.end_node = Node(pos=[row, col])
         return
 
     '''
@@ -443,7 +414,8 @@ class PathPlanner():
         
         # reverse so it's from start to end
         path = path[::-1]
-        return path
+        self.path = path
+        return
 
     '''
     Function: initialize_plot
@@ -509,19 +481,19 @@ class PathPlanner():
     Inputs: path (list of nodes)
     Default: None
     Returns: None
-    Calls: self.map, self.start_node, self.end_node
+    Calls: self.map, self.start_node, self.end_node, self.path
     Notes: Plots the map with path overlain. Shows start and end nodes and the path in between.
     start_x and start_y correspond to col, row indeces, as do end_x and end_y
     '''
 
-    def plot_final_path(self, path):
+    def plot_final_path(self):
         """
         This plots the heatmap with the path overlain. It shows the start and end node and the path in between.
         """
         print("PLOTTING FINAL PATH")        
         x = []
         y = []
-        for pos in path:
+        for pos in self.path:
             x.append(pos[1]+.5) # offset to look good on heat map
             y.append(pos[0]+.5)
 
@@ -541,9 +513,9 @@ class PathPlanner():
         end = plt.scatter(end_x, end_y, marker='o', s=thickness, color=[0,1,1])
 
         # plot path
-        path = plt.scatter(x, y, marker='o', s=thickness, color=[1, .5, 0])
+        path_plot = plt.scatter(x, y, marker='o', s=thickness, color=[1, .5, 0])
 
-        plt.legend((start, end, path), ('Start', 'End', 'Path'))
+        plt.legend((start, end, path_plot), ('Start', 'End', 'Path'))
 
         plt.show()
         return
@@ -557,11 +529,120 @@ class PathPlanner():
     Notes:
     '''
 
+    def coordinates_from_pos(self, pos):
+        # real map size in [x,y] (bottom left origin)
+        real_map_x = self.real_map_size[0]
+        real_map_y = self.real_map_size[1]
+        # map array size in [rows, columns] - corresponds to y,x. Translated to same coordinate frame:
+        map_array_x = self.map.shape[1]
+        map_array_y = self.map.shape[0]
+
+        # divide feet by array size
+        x_multiplier = real_map_x / map_array_x
+        y_multiplier = real_map_y / map_array_y
+
+        # translate array indeces to real life coordinates
+        real_x = pos[1] * x_multiplier
+        real_y = (map_array_y - pos[0]) * y_multiplier
+
+        return real_x, real_y
+
+    '''
+    Function: 
+    Inputs:
+    Default:
+    Returns:
+    Calls:
+    Notes:
+    '''
+
+    def pos_from_coordinates(self, coordinates):
+        # real map size in [x,y] (bottom left origin)
+        real_map_x = self.real_map_size[0]
+        real_map_y = self.real_map_size[1]
+        # map array size in [rows, columns] - corresponds to y,x. Translated to same coordinate frame:
+        map_array_x = self.map.shape[1] - 1
+        map_array_y = self.map.shape[0] - 1
+
+        # divide array size by feet
+        row_multiplier = map_array_y / real_map_y
+        col_multiplier = map_array_x / real_map_x
+
+        # translate coordinates to array indeces
+        row = int((real_map_y - coordinates[1]) * row_multiplier)
+        col = int(coordinates[0] * col_multiplier)
+
+        return row, col
+
+    '''
+    Function: 
+    Inputs: coordinate (x, y in map), angle (counterclockwise from x, radians)
+    Default:
+    Returns:
+    Calls:
+    Notes:
+    '''
+
+    def get_action(self, coordinate=None, angle=None, message=None):
+        # get message/position update from rover (through main)
+        # TODO: need to talk to carl about potential messages
+        current_coord = coordinate # x, y in map
+        current_angle = angle # counterclockwise from x, radians
+
+        if not self.path:
+            print("PathPlanner: NO PATH! PLAN AGAIN")
+            return
+        
+        else:
+            next_node = self.path[0]
+            target_pos = next_node.pos # row, col WILL EFFECT CALCULATIONS
+            target_coord = self.coordinates_from_pos(target_pos)
+            
+            delta_row = target[0]-current_pos[0]
+            delta_column = target[1]-current[1]
+
+            # angle counterclockwise from map x from current node pos
+            angle_target = np.arctan(delta_column/delta_row)
+            # adjust angle to map coordinate frame:
+            if angle_target < 0:
+                if delta_column > 0:
+                    # target to top right (map coordinate frame)
+                    angle_target = abs(angle_target)
+                if delta_column < 0:
+                    # target to lower left
+                    angle_target = abs(angle_target) + 
+            if angle_target > 0:
+                if delta_column > 0:
+                    # target to bottom right
+            if angle_target < 0:
+                if delta_column < 0:
+                    # target to top left
+
+        return
+
+    def angle_from_coordinates(self, start_coordinate, end_coordinate):
+        x1, y1 = start_coordinate[0], start_coordinate[1]
+        x2, y2 = start_coordinate[0], start_coordinate[1]
+
+        delta_x = x2 - x1
+        delta_y = y2 - y1
+
+        
+
+    '''
+    Function: 
+    Inputs:
+    Default:
+    Returns:
+    Calls:
+    Notes:
+    '''
+
     def run(self):
         print("BEGIN")
         #TODO: Call plan_path and plot_path
-        path = self.plan_path(plot_path=False)
-        self.plot_final_path(path)
+        self.plan_path(plot_path=False)
+        self.plot_final_path()
         print("END")
         #self.plot_path(path)
 

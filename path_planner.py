@@ -598,36 +598,106 @@ class PathPlanner():
             target_pos = next_node.pos # row, col WILL EFFECT CALCULATIONS
             target_coord = self.coordinates_from_pos(target_pos)
             
-            delta_row = target[0]-current_pos[0]
-            delta_column = target[1]-current[1]
-
-            # angle counterclockwise from map x from current node pos
-            angle_target = np.arctan(delta_column/delta_row)
-            # adjust angle to map coordinate frame:
-            if angle_target < 0:
-                if delta_column > 0:
-                    # target to top right (map coordinate frame)
-                    angle_target = abs(angle_target)
-                if delta_column < 0:
-                    # target to lower left
-                    angle_target = abs(angle_target) + 
-            if angle_target > 0:
-                if delta_column > 0:
-                    # target to bottom right
-            if angle_target < 0:
-                if delta_column < 0:
-                    # target to top left
+            
 
         return
 
+    '''
+    Function: 
+    Inputs:
+    Default:
+    Returns:
+    Calls:
+    Notes:
+    '''
+
     def angle_from_coordinates(self, start_coordinate, end_coordinate):
+        # gives you the angle from the start coordinate to end coordinate counterclockwise from x in the map coordinate system, in radians
+
+        angle = 0
+
+        if (start_coordinate == end_coordinate):
+            return 0
+
         x1, y1 = start_coordinate[0], start_coordinate[1]
-        x2, y2 = start_coordinate[0], start_coordinate[1]
+        x2, y2 = end_coordinate[0], end_coordinate[1]
 
         delta_x = x2 - x1
         delta_y = y2 - y1
 
+        if (delta_y == 0):
+            if delta_x > 0:
+                # target directly to right
+                angle = 0
+            if delta_x < 0:
+                # target directly to left
+                angle = math.pi
+        elif (delta_x == 0):
+            if delta_y > 0:
+                # target above
+                angle = math.pi / 2
+            if delta_y < 0:
+                # target below
+                angle = math.pi * (3/2)
+        else:
+            angle = np.arctan(delta_y/delta_x)
+            # adjust angle to coordinate frame
+            if (angle > 0):
+                # either top right (no adjustments) or bottom left (add pi)
+                if (x2 < x1):
+                    angle = angle + math.pi
+            if angle < 0:
+                # either top left (subtract from pi) or bottom right (subtract from 2pi)
+                if (x2 < x1): # top left
+                    angle = math.pi - angle
+                else: # bottom right
+                    angle = (math.pi * 2) - angle
         
+        return angle
+
+    '''
+    Function: 
+    Inputs:
+    Default:
+    Returns:
+    Calls:
+    Notes:
+    '''
+
+    def calculate_angular_movement(self, current_angle, target_angle):
+        # check which way to turn based on whether it's more or less than pi radians away
+        # positive if counterclockwise, negative if clockwise
+
+        delta_angle = 0
+
+        if (current_angle == target_angle):
+            # debug:
+            print("HERE, {} equal to target".format(current_angle))
+            delta_angle = 0
+
+        elif (current_angle > target_angle):
+            # debug:
+            print("HERE, {} larger than target".format(current_angle))
+            threshold_angle = target_angle + math.pi
+            if (current_angle <= threshold_angle):
+                # rotate clockwise (negative)
+                delta_angle = -1*(current_angle - target_angle)
+            else:
+                # rotate counterclockwise (positive)
+                delta_angle = 2*math.pi - (current_angle - target_angle)
+
+        else:
+            # debug
+            print("HERE, {} less than target".format(current_angle))
+            threshold_angle = current_angle + math.pi
+            if (target_angle < threshold_angle):
+                # rotate counterclockwise (positive)
+                delta_angle = target_angle - current_angle
+            else:
+                # rotate clockwise (negative)
+                delta_angle = -1*(2*math.pi - (target_angle - current_angle))
+
+        return delta_angle
 
     '''
     Function: 
@@ -639,12 +709,23 @@ class PathPlanner():
     '''
 
     def run(self):
+        """typical path planner:
         print("BEGIN")
         #TODO: Call plan_path and plot_path
         self.plan_path(plot_path=False)
         self.plot_final_path()
         print("END")
         #self.plot_path(path)
+        """
+
+        # DEBUG
+        current_angle = math.pi * (6/4)
+        target_angle = self.angle_from_coordinates([2,2], [3,3])
+        angle_mvmt = self.calculate_angular_movement(current_angle, target_angle)
+        print("")
+        print("current: {}".format(current_angle))
+        print("target: {}".format(target_angle))
+        print("movement: {}".format(angle_mvmt))
 
 if __name__ == '__main__':
     path_planner = PathPlanner()

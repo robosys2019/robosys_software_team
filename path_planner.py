@@ -593,14 +593,20 @@ class PathPlanner():
             print("PathPlanner: NO PATH! PLAN AGAIN")
             return
         
-        else:
-            next_node = self.path[0]
-            target_pos = next_node.pos # row, col WILL EFFECT CALCULATIONS
-            target_coord = self.coordinates_from_pos(target_pos)
-            
-            
+        next_node = self.path[0]
+        target_pos = next_node.pos # row, col
+        target_coord = self.coordinates_from_pos(target_pos)
+        target_angle = self.angle_between_coordinates(current_coord, target_coord)
+        
+        # get need change in angle:
+        delta_angle = self.calculate_angular_movement(current_angle, target_angle)
 
-        return
+        # get change in distance:
+        delta_distance = self.calculate_linear_movement(current_coord, target_coord)
+
+        message = self.make_message(delta_angle, delta_distance)
+            
+        return message
 
     '''
     Function: 
@@ -611,7 +617,28 @@ class PathPlanner():
     Notes:
     '''
 
-    def angle_from_coordinates(self, start_coordinate, end_coordinate):
+    def make_message(self, angle=0, distance=0):
+        # TODO: Check this format
+        # For now idk, make each 5 characters (3 decimal places)
+        length = 3
+        angle_str = str(angle)[:length]
+        dist_str = str(distance)[:length]
+        #print(angle_str, type(angle_str))
+        #print(dist_str, type(dist_str))
+        message = angle_str + dist_str
+        print(message)
+        return
+    
+    '''
+    Function: 
+    Inputs:
+    Default:
+    Returns:
+    Calls:
+    Notes:
+    '''
+
+    def angle_between_coordinates(self, start_coordinate, end_coordinate):
         # gives you the angle from the start coordinate to end coordinate counterclockwise from x in the map coordinate system, in radians
 
         angle = 0
@@ -671,13 +698,9 @@ class PathPlanner():
         delta_angle = 0
 
         if (current_angle == target_angle):
-            # debug:
-            print("HERE, {} equal to target".format(current_angle))
             delta_angle = 0
 
         elif (current_angle > target_angle):
-            # debug:
-            print("HERE, {} larger than target".format(current_angle))
             threshold_angle = target_angle + math.pi
             if (current_angle <= threshold_angle):
                 # rotate clockwise (negative)
@@ -687,8 +710,6 @@ class PathPlanner():
                 delta_angle = 2*math.pi - (current_angle - target_angle)
 
         else:
-            # debug
-            print("HERE, {} less than target".format(current_angle))
             threshold_angle = current_angle + math.pi
             if (target_angle < threshold_angle):
                 # rotate counterclockwise (positive)
@@ -708,6 +729,26 @@ class PathPlanner():
     Notes:
     '''
 
+    def calculate_linear_movement(self, start_coordinate, end_coordinate):
+        x1, y1 = start_coordinate[0], start_coordinate[1]
+        x2, y2 = end_coordinate[0], end_coordinate[1]
+
+        delta_x = x2 - x1
+        delta_y = y2 - y1
+
+        distance = np.sqrt(delta_x**2 + delta_y**2)
+
+        return distance
+
+    '''
+    Function: 
+    Inputs:
+    Default:
+    Returns:
+    Calls:
+    Notes:
+    '''
+
     def run(self):
         """typical path planner:
         print("BEGIN")
@@ -717,15 +758,7 @@ class PathPlanner():
         print("END")
         #self.plot_path(path)
         """
-
-        # DEBUG
-        current_angle = math.pi * (6/4)
-        target_angle = self.angle_from_coordinates([2,2], [3,3])
-        angle_mvmt = self.calculate_angular_movement(current_angle, target_angle)
-        print("")
-        print("current: {}".format(current_angle))
-        print("target: {}".format(target_angle))
-        print("movement: {}".format(angle_mvmt))
+        self.make_message(angle=.14159262, distance=164.345)
 
 if __name__ == '__main__':
     path_planner = PathPlanner()

@@ -5,7 +5,7 @@ This is built to make a one-time map for the full mission. It takes data from th
 It has the functions:
 - set_map (YOU MUST DO THIS to get an accurate lowres map back)
 - get_lowres_map (returns a low res slope map from set_map)
-- plot_map (plots the raw map given in set_map)
+- plot_data (plots the raw map given in set_map)
 - sobel_filter_data (transforms depth data to slope data)
 - plot_all (plots high res map with depth and slope data, then low res map with depth and slope data)
 - run
@@ -21,7 +21,7 @@ import numpy as np
 class MapMaker():
     def __init__(self):
         # initialize np array for map data
-        self.map = []
+        self.data = []
 
     '''
     Function: set_map
@@ -35,8 +35,7 @@ class MapMaker():
     Sets the global variable "self.data" to new map values. Necessary to set before processing any new map with other functions.
     '''
     def set_map(self, map_data = np.loadtxt("example_maps/box_image.txt")):
-        self.map = map_data
-        print("MapMaker: MAP SET")
+        self.data = map_data
         return
 
     '''
@@ -54,7 +53,7 @@ class MapMaker():
         new_columns = int(box_width / resolution)
 
         # resize map with new sizes
-        resized_map = cv2.resize(self.map, (new_columns, new_rows))
+        resized_map = cv2.resize(self.data, (new_columns, new_rows))
         # run "edge detection" on map for slope data
         sobeled_map = self.sobel_filter_data(resized_map)
 
@@ -64,15 +63,15 @@ class MapMaker():
             return sobeled_map
 
     '''
-    Function: plot_map
+    Function: plot_data
     Inputs: None
     Returns: nothing
 
     plots the full res depth map set by function set_map
     '''
-    def plot_map(self):
+    def plot_data(self):
         # plot heat map
-        sns.heatmap(self.map, cmap="YlGnBu")
+        sns.heatmap(self.data, cmap="YlGnBu")
         plt.show()
 
     '''
@@ -92,17 +91,17 @@ class MapMaker():
     Inputs: None
     Returns: Nothing
 
-    Plots 4 heatmaps of original map (depth and slope) and low res map (depth and slope)
+    Plots 4 heatmaps of original data (depth and slope) and low res data (depth and slope)
     '''
     def plot_all(self):
-        # plot normal and changed map
+        # plot normal and changed data
         # setup matplotlib fig
-        f, axes = plt.subplots(2, 2, sharex=False)
+        f, axes = plt.subplots(2, 2, sharex=True)
         sns.despine(left=True) # what does this do?
 
-        # plot heatmaps of full res and full res edge detected map
-        sns.heatmap(self.map, cmap="YlGnBu", ax=axes[0, 0])
-        sns.heatmap(self.sobel_filter_data(self.map), cmap="YlGnBu", ax=axes[0, 1])
+        # plot heatmaps of full res and full res edge detected data
+        sns.heatmap(self.data, cmap="YlGnBu", ax=axes[0, 0])
+        sns.heatmap(self.sobel_filter_data(self.data), cmap="YlGnBu", ax=axes[0, 1])
         
         # get lower res maps
         new_map, new_sobel = self.get_lowres_map(keep_depth_map=True)
@@ -112,17 +111,13 @@ class MapMaker():
         sns.heatmap(new_sobel, cmap="YlGnBu", ax=axes[1, 1])
 
         plt.show()
-        return
 
     '''
-    Function: calibrate_map
-    Inputs: threshold_val (filters out values in map above this)
-    Notes: Finds objects too close to camera (~ not in litter box) and sets to 0 (as in no distance). The higher the value in the map, the farther away.
-    
+    Function: mess_with_example_map(self):
+
+    for testing purposes. seeing if I can manipulate test data.
     '''
-    def calibrate_map(self, threshold_val=3200):
-        threshold_indeces = self.map > threshold_val
-        self.map[threshold_indeces] = 0
+    def calibrate_map(self):
         return
 
     '''
@@ -134,8 +129,7 @@ class MapMaker():
     '''
     def run(self):
         self.set_map()
-        self.calibrate_map()
-        print(self.map.shape)
+        #calibrate_map()
         self.plot_all()
         return
 

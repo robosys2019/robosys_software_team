@@ -1,8 +1,0 @@
-prefix=/home/charlie/catkin_ws/src/robosys_software_team/devel
-
-Name: robosys
-Description: Description of robosys
-Version: 0.0.0
-Cflags: 
-Libs: -L/home/charlie/catkin_ws/src/robosys_software_team/devel/lib 
-Requires: 

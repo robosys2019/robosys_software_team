@@ -3,7 +3,7 @@ Repo for mapping, path planning, and robot interfacing
 
 
 ### Compiling Publisher
-First, to setup the KinectOneStream executable, clone the repository and switch to the correct branch. Today it is the ```carl_dev``` branch.
+First, to setup the KinectOneStream executable, clone the repository and switch to the correct branch. Today it is the ```master``` branch.
 
 Follow these simple steps:
 ```

@@ -20,23 +20,17 @@ libfreenect2::Freenect2Device *dev = 0;
 libfreenect2::PacketPipeline *pipeline = 0;
 libfreenect2::Registration *registration;
 libfreenect2::SyncMultiFrameListener *listener;
-libfreenect2::Frame *undistorted, *registered, *depth2rgb;
+libfreenect2::Frame *undistorted;
 
-cv::Mat rgbmat, depthmat, depthmatUndistorted, irmat, rgbd, rgbd2;
+cv::Mat rgbmat, depthmatUndistorted;
 
 ros::NodeHandle *nh;
 image_transport::ImageTransport *it;
 image_transport::Publisher rgb_pub;
-image_transport::Publisher depth_pub;
 image_transport::Publisher depth_undistorted_pub;
-image_transport::Publisher ir_pub;
-image_transport::Publisher rgbd_pub;
 
 sensor_msgs::ImagePtr rgb_msg;
-sensor_msgs::ImagePtr depth_msg;
 sensor_msgs::ImagePtr depth_undistorted_msg;
-sensor_msgs::ImagePtr ir_msg;
-sensor_msgs::ImagePtr rgbd_msg;
 
 
 void open_kinect();

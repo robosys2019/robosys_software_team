@@ -22,7 +22,7 @@ from scipy import ndimage
 import cv2
 import numpy as np
 
-class Map_Maker():
+class MapMaker():
     def __init__(self):
         # initialize np array for map data
         self.data = []
@@ -95,23 +95,26 @@ class Map_Maker():
     Plots 4 heatmaps of original data (depth and slope) and low res data (depth and slope)
     '''
     def plot_all(self):
-        # plot normal and changed data
-        # setup matplotlib fig
-        f, axes = plt.subplots(2, 2, sharex=True)
-        sns.despine(left=True) # what does this do?
+        if self.data != []:
+            # plot normal and changed data
+            # setup matplotlib fig
+            f, axes = plt.subplots(2, 2)
+            sns.despine(left=True) # what does this do?
 
-        # plot heatmaps of full res and full res edge detected data
-        sns.heatmap(self.data, cmap="YlGnBu", ax=axes[0, 0])
-        sns.heatmap(self.sobel_filter_data(self.data), cmap="YlGnBu", ax=axes[0, 1])
-        
-        # get lower res maps
-        new_map, new_sobel = self.get_lowres_map(keep_depth_map=True)
+            # plot heatmaps of full res and full res edge detected data
+            sns.heatmap(self.data, cmap="YlGnBu", ax=axes[0, 0], vmin=0, vmax=2000)
+            sns.heatmap(self.sobel_filter_data(self.data), cmap="YlGnBu", ax=axes[0, 1], vmin=0, vmax=5000)
+            
+            # get lower res maps
+            new_map, new_sobel = self.get_lowres_map(keep_depth_map=True)
 
-        # plot heatmaps of lower res maps (reg and sobel)
-        sns.heatmap(new_map, cmap="YlGnBu", ax=axes[1, 0])
-        sns.heatmap(new_sobel, cmap="YlGnBu", ax=axes[1, 1])
+            # plot heatmaps of lower res maps (reg and sobel)
+            sns.heatmap(new_map, cmap="YlGnBu", ax=axes[1, 0], vmin=0, vmax=1000)
+            sns.heatmap(new_sobel, cmap="YlGnBu", ax=axes[1, 1], vmin=0, vmax=2000)
 
-        plt.show()
+            plt.show()
+        else:
+            print("[MapMaker] Waiting for data.")
 
     '''
     Function: run
@@ -126,5 +129,5 @@ class Map_Maker():
         return
 
 if __name__ == '__main__':
-    node = Map_Maker()
+    node = MapMaker()
     node.run()

@@ -43,17 +43,16 @@ class KinectSubscriber:
 
         try:
             cv_image = self.bridge.imgmsg_to_cv2(data, encoding)
-            self.rgb_data = cv_image
+            self.rgb_data = cv_image.copy()
         except CvBridgeError as e:
             print(e)
 
         if self.show:
             cv2.imshow("RGB Image Window", cv_image)
-
-        cv2.waitKey(3)
+            cv2.waitKey(3)
 
 if __name__ == '__main__':
-    ic = KinectSubscriber(show=True)
+    ic = KinectSubscriber(show=False)
     rospy.init_node('kinect_subscriber', anonymous=True)
     try:
         rospy.spin()

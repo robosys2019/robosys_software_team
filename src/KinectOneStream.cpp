@@ -11,139 +11,111 @@
 -- Contact: Chih-Yao Ma at <cyma@gatech.edu>
 */
 
-//! [headers]
-#include <iostream>
-#include <stdio.h>
-#include <iomanip>
-#include <time.h>
-#include <signal.h>
-#include <opencv2/opencv.hpp>
+#include <stdlib.h>
+#include "KinectOneStream.h"
 
-#include <libfreenect2/libfreenect2.hpp>
-#include <libfreenect2/frame_listener_impl.h>
-#include <libfreenect2/registration.h>
-#include <libfreenect2/packet_pipeline.h>
-#include <libfreenect2/logger.h>
-//! [headers]
 
-using namespace std;
-using namespace cv;
+void open_kinect(){
+    ROS_INFO("Attempting to connect to Kinect One sensor!");
 
-bool protonect_shutdown = false; // Whether the running application should shut down.
-
-void sigint_handler(int s)
-{
-  protonect_shutdown = true;
-}
-
-int main()
-{
-    std::cout << "Streaming from Kinect One sensor!" << std::endl;
-
-    //! [context]
-    libfreenect2::Freenect2 freenect2;
-    libfreenect2::Freenect2Device *dev = 0;
-    libfreenect2::PacketPipeline *pipeline = 0;
-    //! [context]
-
-    //! [discovery]
-    if(freenect2.enumerateDevices() == 0)
-    {
-        std::cout << "no device connected!" << std::endl;
-        return -1;
+    if(freenect2.enumerateDevices() == 0){
+        ROS_FATAL("No device connected!");
+        exit(-1);
     }
 
-    string serial = freenect2.getDefaultDeviceSerialNumber();
+    std::string serial = freenect2.getDefaultDeviceSerialNumber();
 
-    std::cout << "SERIAL: " << serial << std::endl;
+    ROS_INFO("SERIAL: %s", serial.c_str());
 
-    if(pipeline)
-    {
-        //! [open]
+    if(pipeline){
         dev = freenect2.openDevice(serial, pipeline);
-        //! [open]
-    } else {
+    }else{
         dev = freenect2.openDevice(serial);
     }
 
-    if(dev == 0)
-    {
-        std::cout << "failure opening device!" << std::endl;
-        return -1;
+    if(dev == 0){
+        ROS_FATAL("failure opening device!");
+        exit(-1);
     }
+}
 
-    signal(SIGINT, sigint_handler);
-    protonect_shutdown = false;
+void setup_kinect(){
+    listener = new libfreenect2::SyncMultiFrameListener(libfreenect2::Frame::Color |
+                                                        libfreenect2::Frame::Depth |
+                                                        libfreenect2::Frame::Ir);
 
-    //! [listeners]
-    libfreenect2::SyncMultiFrameListener listener(libfreenect2::Frame::Color |
-                                                  libfreenect2::Frame::Depth |
-                                                  libfreenect2::Frame::Ir);
-    libfreenect2::FrameMap frames;
+    dev->setColorFrameListener(listener);
+    dev->setIrAndDepthFrameListener(listener);
 
-    dev->setColorFrameListener(&listener);
-    dev->setIrAndDepthFrameListener(&listener);
-    //! [listeners]
 
-    //! [start]
     dev->start();
+    ROS_INFO("Device serial: %s", dev->getSerialNumber().c_str());
+    ROS_INFO("Device firmware: %s", dev->getFirmwareVersion().c_str());
 
-    std::cout << "device serial: " << dev->getSerialNumber() << std::endl;
-    std::cout << "device firmware: " << dev->getFirmwareVersion() << std::endl;
-    //! [start]
 
-    //! [registration setup]
-    libfreenect2::Registration* registration = new libfreenect2::Registration(dev->getIrCameraParams(), dev->getColorCameraParams());
-    libfreenect2::Frame undistorted(512, 424, 4), registered(512, 424, 4), depth2rgb(1920, 1080 + 2, 4); // check here (https://github.com/OpenKinect/libfreenect2/issues/337) and here (https://github.com/OpenKinect/libfreenect2/issues/464) why depth2rgb image should be bigger
-    //! [registration setup]
+    registration = new libfreenect2::Registration(dev->getIrCameraParams(), dev->getColorCameraParams());
+    undistorted = new libfreenect2::Frame(512, 424, 4);
 
-    Mat rgbmat, depthmat, depthmatUndistorted, irmat, rgbd, rgbd2;
+}
 
-    //! [loop start]
-    while(!protonect_shutdown)
+void setup_ros(){
+    it = new image_transport::ImageTransport(*nh);
+    rgb_pub = it->advertise("camera/image", 1);
+    depth_undistorted_pub = it->advertise("camera/depth_undistorted", 1);
+}
+
+void loop(){
+    ros::Rate r(2); // 2 Hz
+    while(ros::ok())
     {
-        listener.waitForNewFrame(frames);
+        listener->waitForNewFrame(frames);
         libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
-        libfreenect2::Frame *ir = frames[libfreenect2::Frame::Ir];
         libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
-        //! [loop start]
 
         cv::Mat(rgb->height, rgb->width, CV_8UC4, rgb->data).copyTo(rgbmat);
-        cv::Mat(ir->height, ir->width, CV_32FC1, ir->data).copyTo(irmat);
-        cv::Mat(depth->height, depth->width, CV_32FC1, depth->data).copyTo(depthmat);
 
-        cv::imshow("rgb", rgbmat);
-        cv::imshow("ir", irmat / 4096.0f);
-        cv::imshow("depth", depthmat / 4096.0f);
+        registration->undistortDepth(depth, undistorted);
 
-        //! [registration]
-        registration->apply(rgb, depth, &undistorted, &registered, true, &depth2rgb);
-        //! [registration]
+        cv::Mat(undistorted->height, undistorted->width, CV_32FC1, undistorted->data).copyTo(depthmatUndistorted);
 
-        cv::Mat(undistorted.height, undistorted.width, CV_32FC1, undistorted.data).copyTo(depthmatUndistorted);
-        cv::Mat(registered.height, registered.width, CV_8UC4, registered.data).copyTo(rgbd);
-        cv::Mat(depth2rgb.height, depth2rgb.width, CV_32FC1, depth2rgb.data).copyTo(rgbd2);
+        publish();
+        ros::spinOnce();
 
-
-        cv::imshow("undistorted", depthmatUndistorted / 4096.0f);
-        cv::imshow("registered", rgbd);
-        cv::imshow("depth2RGB", rgbd2 / 4096.0f);
-
-        int key = cv::waitKey(1);
-        protonect_shutdown = protonect_shutdown || (key > 0 && ((key & 0xFF) == 27)); // shutdown on escape
-
-    //! [loop end]
-        listener.release(frames);
+        listener->release(frames);
+        r.sleep();
     }
-    //! [loop end]
+}
 
-    //! [stop]
+void publish(){
+    rgb_msg = cv_bridge::CvImage(std_msgs::Header(), "bgra8", rgbmat).toImageMsg();
+    depth_undistorted_msg = cv_bridge::CvImage(std_msgs::Header(), "32FC1", depthmatUndistorted).toImageMsg();
+
+    rgb_pub.publish(rgb_msg);
+    depth_undistorted_pub.publish(depth_undistorted_msg);
+}
+
+int main(int argc, char **argv){
+
+    ros::init(argc, argv, "kinect");
+
+    ros::NodeHandle n;
+    nh = &n;
+
+    open_kinect();
+
+    setup_kinect();
+
+    setup_ros();
+
+    loop();
+
     dev->stop();
     dev->close();
-    //! [stop]
 
     delete registration;
+    delete listener;
+    delete undistorted;
 
-    std::cout << "Streaming Ends!" << std::endl;
+    ROS_INFO("Streaming Ends!");
     return 0;
 }

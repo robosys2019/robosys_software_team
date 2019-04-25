@@ -618,15 +618,15 @@ class PathPlanner():
     Notes:
     '''
 
-    def make_message(self, angle=0, distance=0):
+    def make_message(self, angle=0, distance=0, size=6):
         # TODO: Check this format
         # For now idk, make each 5 characters (3 decimal places)
-        length = 3
+        length = size/3
         angle_str = str(angle)[:length]
         dist_str = str(distance)[:length]
         message = angle_str + dist_str
-        print(message)
-        return
+        # print(message)
+        return message
     
     '''
     Function: 

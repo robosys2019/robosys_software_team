@@ -65,7 +65,7 @@ void setup_ros(){
 }
 
 void loop(){
-    ros::Rate r(30); // 30 Hz
+    ros::Rate r(2); // 2 Hz
     while(ros::ok())
     {
         listener->waitForNewFrame(frames);

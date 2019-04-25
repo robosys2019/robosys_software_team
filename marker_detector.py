@@ -17,9 +17,29 @@ class MarkerDetector:
         else:
             frame = aruco.drawDetectedMarkers(frame, markers)
             print("[MarkerDetector] Found marker in image.")
+        
+        if frame != []:
+            cv2.imshow("RGB Image Window", frame)
+            cv2.waitKey(3)
+        
+        # # Using webcam
+        # cap = cv2.VideoCapture(1)
+        # while(True):
+        #     ret, frame = cap.read() #640x480
 
-        cv2.imshow("RGB Image Window", frame)
-        cv2.waitKey(3)
+        #     # Detecting markers in real time
+        #     gray_image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        #     markers, ids, _ = aruco.detectMarkers(gray_image, self.aruco_dict, parameters=self.parameters)
+
+        #     if (len(markers) == 0):
+        #         # print("No marker found.")
+        #         pass
+        #     else:
+        #         aruco.drawDetectedMarkers(frame, markers)
+        #         print("[MarkerDetector] Found marker in image. Id: " + str(ids[0]))
+        #         corners = np.reshape(markers, (-1, 2))
+        #         for c in corners:
+        #             print(c)
 
     def test(self):
         # Using webcam
@@ -36,6 +56,10 @@ class MarkerDetector:
                 pass
             else:
                 aruco.drawDetectedMarkers(frame, markers)
+                print("[MarkerDetector] Found marker in image. Id: " + str(ids[0]))
+                corners = np.reshape(markers, (-1, 2))
+                for c in corners:
+                    print(c)
 
             # Show image, press q to exit
             cv2.imshow('clean image', frame)

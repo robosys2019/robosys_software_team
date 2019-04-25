@@ -95,6 +95,27 @@ class MapMaker():
     Plots 4 heatmaps of original map (depth and slope) and low res map (depth and slope)
     '''
     def plot_all(self):
+      #Working before
+#         if self.data != []:
+#             # plot normal and changed data
+#             # setup matplotlib fig
+#             f, axes = plt.subplots(2, 2)
+#             sns.despine(left=True) # what does this do?
+
+#             # plot heatmaps of full res and full res edge detected data
+#             sns.heatmap(self.data, cmap="YlGnBu", ax=axes[0, 0], vmin=0, vmax=2000)
+#             sns.heatmap(self.sobel_filter_data(self.data), cmap="YlGnBu", ax=axes[0, 1], vmin=0, vmax=5000)
+            
+#             # get lower res maps
+#             new_map, new_sobel = self.get_lowres_map(keep_depth_map=True)
+
+#             # plot heatmaps of lower res maps (reg and sobel)
+#             sns.heatmap(new_map, cmap="YlGnBu", ax=axes[1, 0], vmin=0, vmax=1000)
+#             sns.heatmap(new_sobel, cmap="YlGnBu", ax=axes[1, 1], vmin=0, vmax=2000)
+
+#             plt.show()
+#         else:
+#             print("[MapMaker] Waiting for data.")
         # plot normal and changed map
         # setup matplotlib fig
         f, axes = plt.subplots(2, 2, sharex=False)

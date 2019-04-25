@@ -623,8 +623,6 @@ class PathPlanner():
         length = 3
         angle_str = str(angle)[:length]
         dist_str = str(distance)[:length]
-        #print(angle_str, type(angle_str))
-        #print(dist_str, type(dist_str))
         message = angle_str + dist_str
         print(message)
         return

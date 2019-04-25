@@ -115,13 +115,14 @@ class MapMaker():
         return
 
     '''
-    Function: mess_with_example_map(self):
-
-    for testing purposes. seeing if I can manipulate test data.
+    Function: calibrate_map
+    Inputs: threshold_val (filters out values in map above this)
+    Notes: Finds objects too close to camera (~ not in litter box) and sets to 0 (as in no distance). The higher the value in the map, the farther away.
+    
     '''
     def calibrate_map(self, threshold_val=3200):
         threshold_indeces = self.map > threshold_val
-        self.map[threshold_indeces] = 0#threshold_val
+        self.map[threshold_indeces] = 0
         return
 
     '''

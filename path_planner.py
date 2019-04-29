@@ -42,6 +42,7 @@ import seaborn as sns
 import random
 from map_maker import MapMaker
 import math
+import serial
 
 """
 Node functions:
@@ -109,7 +110,10 @@ class PathPlanner():
         self.start_node = None
         self.end_node = None
         self.path = None
-        self.real_map_size = [7.75, 15] # size in feet of map. 
+        self.real_map_size = [7.75, 15] # size in feet of map.
+        self.ser = serial.Serial(/dev/ttyUSB0, 9600)
+        self.ser.close()
+        self.ser.open() 
 
     '''
     Function: set_map
@@ -630,8 +634,12 @@ class PathPlanner():
         length = size/3
         angle_str = str(angle)[:length]
         dist_str = str(distance)[:length]
-        message = angle_str + dist_str
+        #message = angle_str + dist_str
+        message = bytearray([angle, distance])
+        # ^ this probably needs to change based on the format of angle and distance
+
         # print(message)
+        self.ser.write(message)
         return message
     
     '''
@@ -785,3 +793,5 @@ if __name__ == '__main__':
     path_planner.set_end_node()
 
     path_planner.run()
+
+    path_planner.ser.close()

@@ -14,17 +14,20 @@ https://www.redblobgames.com/pathfinding/a-star/introduction.html
 INPUT:
 - rover pos
 
+STATUS:
+- Working on get_action
+
 TODO:
 
-- return action & arc
-        - example actions: "GET UNSTUCK" "FOLLOW PATH"
-        - Might only want to pass arc when it detects it has reached the end of the old path
-
 - Compare location to expected location
+
 - create metrics for movement
         - What I thnk is happening based on loction history and when to intervene
-- re-format map to slope and set go/no go areas-- CHANGE THE MAP-MAKER
+
+- Set go/no go areas-- CHANGE THE MAP-MAKER
+
 - plan most efficient path through given 3 points and set target order
+
 - Think about possible limitting physical cases
 
 """
@@ -522,12 +525,12 @@ class PathPlanner():
         return
 
     '''
-    Function: 
-    Inputs:
-    Default:
-    Returns:
-    Calls:
-    Notes:
+    Function: coordinates_from_pos
+    Inputs: pos (row, column in map array)
+    Default: None
+    Returns: real_x, real_x (real world coordinates with bottom left origin in map)
+    Calls: self.real_map, self.map
+    Notes: Used in [TODO: fill]
     '''
 
     def coordinates_from_pos(self, pos):
@@ -549,12 +552,12 @@ class PathPlanner():
         return real_x, real_y
 
     '''
-    Function: 
-    Inputs:
-    Default:
-    Returns:
-    Calls:
-    Notes:
+    Function: pos_from_coordinates
+    Inputs: coordinates (real_x, real_y in real world coordinate frame)
+    Default: None
+    Returns: row, col (indeces in map array)
+    Calls: self.real_map, self.map
+    Notes: Used in [TODO]
     '''
 
     def pos_from_coordinates(self, coordinates):
@@ -576,15 +579,15 @@ class PathPlanner():
         return row, col
 
     '''
-    Function: 
+    Function: get_action
     Inputs: coordinate (x, y in map), angle (counterclockwise from x, radians)
-    Default:
-    Returns:
-    Calls:
-    Notes:
+    Default: None
+    Returns: message (string to rover containing delta_angle and delta_distance)
+    Calls: self.path, self.coordinates_from_pos, self.angle_between_coordinates, self.calculate_angular_movement, self.calculate_linear_movement, self.make_message
+    Notes: Follows along most recently planned path
     '''
 
-    def get_action(self, coordinate=None, angle=None, message=None):
+    def get_action(self, coordinate=None, angle=None, message=None, test=False):
         # get message/position update from rover (through main)
         # TODO: need to talk to carl about potential messages
         current_coord = coordinate # x, y in map
@@ -595,17 +598,21 @@ class PathPlanner():
             return
         
         next_node = self.path[0]
+        self.path.pop(0)
+
         target_pos = next_node.pos # row, col
         target_coord = self.coordinates_from_pos(target_pos)
         target_angle = self.angle_between_coordinates(current_coord, target_coord)
         
-        # get need change in angle:
+        # get needed change in angle:
         delta_angle = self.calculate_angular_movement(current_angle, target_angle)
-
         # get change in distance:
         delta_distance = self.calculate_linear_movement(current_coord, target_coord)
 
         message = self.make_message(delta_angle, delta_distance)
+
+        if test:
+            return message, target_angle
             
         return message
 
@@ -620,7 +627,6 @@ class PathPlanner():
 
     def make_message(self, angle=0, distance=0, size=6):
         # TODO: Check this format
-        # For now idk, make each 5 characters (3 decimal places)
         length = size/3
         angle_str = str(angle)[:length]
         dist_str = str(distance)[:length]
@@ -749,15 +755,21 @@ class PathPlanner():
     '''
 
     def run(self):
-        """typical path planner:
         print("BEGIN")
-        #TODO: Call plan_path and plot_path
+
+        # Testing one round of path planning and message sending
+        # (Ex: from beginning to target 1)
         self.plan_path(plot_path=False)
-        self.plot_final_path()
+
+        current_coord = self.start_node
+        current_angle = 0
+
+        while self.plan_path: # while there's a path to follow
+            message, current_angle = self.get_action(current_coord, current_angle, test=True)
+            print(message)
+            # self.make_message(angle =.14159262, distance=164.345)
+
         print("END")
-        #self.plot_path(path)
-        """
-        self.make_message(angle=.14159262, distance=164.345)
 
 if __name__ == '__main__':
     path_planner = PathPlanner()

@@ -9,15 +9,15 @@
 
 class Neopixel_leds{
 public:
-	void setup_leds();
-	void waiting();
-	void stuck();
-	void deploying();
-	void turn_right();
-	void turn_left();
+    void setup_leds();
+    void waiting();
+    void stuck();
+    void deploying();
+    void turn_right();
+    void turn_left();
 
 private:
-	CRGB leds[NUM_LEDS];
+    CRGB leds[NUM_LEDS];
 };
 
 #endif //NEOPIXEL_LEDS_H

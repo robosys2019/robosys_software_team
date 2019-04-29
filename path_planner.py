@@ -16,6 +16,8 @@ INPUT:
 
 STATUS:
 - Working on get_action
+- double check equal function in Node (pathplanner returns pos, not nodes) 
+- check pos_from_coords -- getting negative number in
 
 TODO:
 
@@ -111,9 +113,9 @@ class PathPlanner():
         self.end_node = None
         self.path = None
         self.real_map_size = [7.75, 15] # size in feet of map.
-        self.ser = serial.Serial(/dev/ttyUSB0, 9600)
-        self.ser.close()
-        self.ser.open() 
+        # self.ser = serial.Serial('/dev/ttyUSB0', 9600)
+        # self.ser.close()
+        # self.ser.open() 
 
     '''
     Function: set_map
@@ -156,6 +158,7 @@ class PathPlanner():
     def set_end_node(self, coordinates=[7.75,16]):
         print("PathPlanner: SETTING END NODE")
         row, col = self.pos_from_coordinates(coordinates=coordinates)
+        print(row, col)
         self.end_node = Node(pos=[row, col])
         return
 
@@ -601,10 +604,10 @@ class PathPlanner():
             print("PathPlanner: NO PATH! PLAN AGAIN")
             return
         
-        next_node = self.path[0]
+        next_pos = self.path[0]
         self.path.pop(0)
 
-        target_pos = next_node.pos # row, col
+        target_pos = next_pos # row, col
         target_coord = self.coordinates_from_pos(target_pos)
         target_angle = self.angle_between_coordinates(current_coord, target_coord)
         
@@ -613,10 +616,11 @@ class PathPlanner():
         # get change in distance:
         delta_distance = self.calculate_linear_movement(current_coord, target_coord)
 
-        message = self.make_message(delta_angle, delta_distance)
-
         if test:
-            return message, target_angle
+            message = "DIST: %0.3f  ANGLE: %0.3f" % (delta_distance, delta_angle)
+            return message, target_coord, target_angle
+
+        message = self.make_message(delta_angle, delta_distance)
             
         return message
 
@@ -631,7 +635,7 @@ class PathPlanner():
 
     def make_message(self, angle=0, distance=0, size=6):
         # TODO: Check this format
-        length = size/3
+        length = int(size/2)
         angle_str = str(angle)[:length]
         dist_str = str(distance)[:length]
         #message = angle_str + dist_str
@@ -639,7 +643,7 @@ class PathPlanner():
         # ^ this probably needs to change based on the format of angle and distance
 
         # print(message)
-        self.ser.write(message)
+        # self.ser.write(message)
         return message
     
     '''
@@ -769,11 +773,11 @@ class PathPlanner():
         # (Ex: from beginning to target 1)
         self.plan_path(plot_path=False)
 
-        current_coord = self.start_node
+        current_coord = self.coordinates_from_pos(self.start_node.pos)
         current_angle = 0
 
         while self.plan_path: # while there's a path to follow
-            message, current_angle = self.get_action(current_coord, current_angle, test=True)
+            message, current_coord, current_angle = self.get_action(current_coord, current_angle, test=True)
             print(message)
             # self.make_message(angle =.14159262, distance=164.345)
 
@@ -794,4 +798,4 @@ if __name__ == '__main__':
 
     path_planner.run()
 
-    path_planner.ser.close()
+    # path_planner.ser.close()

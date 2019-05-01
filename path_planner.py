@@ -1,5 +1,4 @@
 """
-Debug: checking merge
 modified from:
 https://medium.com/@nicholas.w.swift/easy-a-star-pathfinding-7e6689c7f7b2
 
@@ -141,8 +140,8 @@ class PathPlanner():
     '''
 
     def set_start_node(self, coordinates=[0,0]):
-        print("PathPlanner: SETTING START NODE")
-        row, col = self.pos_from_coordinates(coordinates=coordinates)
+        row, col = self.pos_from_coordinates(coordinate=coordinates)
+        print("PathPlanner: SETTING START NODE: Coordinate: {}  Position: {}".format(coordinates, [row,col]))
         self.start_node = Node(pos=[row, col])
         return
 
@@ -155,10 +154,9 @@ class PathPlanner():
     Notes: Sets global variable 'end_node'
     '''
 
-    def set_end_node(self, coordinates=[7.75,16]):
-        print("PathPlanner: SETTING END NODE")
-        row, col = self.pos_from_coordinates(coordinates=coordinates)
-        print(row, col)
+    def set_end_node(self, coordinates=[7.75, 15]):
+        row, col = self.pos_from_coordinates(coordinate=coordinates)
+        print("PathPlanner: SETTING END NODE: Coordinate: {}  Position: {}".format(coordinates, [row,col]))
         self.end_node = Node(pos=[row, col])
         return
 
@@ -544,9 +542,24 @@ class PathPlanner():
         # real map size in [x,y] (bottom left origin)
         real_map_x = self.real_map_size[0]
         real_map_y = self.real_map_size[1]
+
         # map array size in [rows, columns] - corresponds to y,x. Translated to same coordinate frame:
         map_array_x = self.map.shape[1]
         map_array_y = self.map.shape[0]
+
+        # make sure coordinates exist:
+        if pos[0] < 0:
+            pos[0] = 0
+            print("WARNING: PathPlanner: Pos Row < 0, setting to 0")
+        if pos[1] > map_array_x:
+            pos[1] = map_array_x
+            print("WARNING: PathPlanner: Pos Col > num cols, setting to max col")
+        if pos[1] < 0:
+            pos[1] = 0
+            print("WARNING: PathPlanner: Pos Col < 0, setting to 0")
+        if pos[0] > map_array_y:
+            pos[0] = map_array_y
+            print("WARNING: PathPlanner: Pos Row > num rows, setting to max row")
 
         # divide feet by array size
         x_multiplier = real_map_x / map_array_x
@@ -567,21 +580,36 @@ class PathPlanner():
     Notes: Used in [TODO]
     '''
 
-    def pos_from_coordinates(self, coordinates):
+    def pos_from_coordinates(self, coordinate):
         # real map size in [x,y] (bottom left origin)
         real_map_x = self.real_map_size[0]
         real_map_y = self.real_map_size[1]
+
+        # make sure coordinates exist:
+        if coordinate[0] < 0:
+            coordinate[0] = 0
+            print("WARNING: PathPlanner: Coordinate X < 0, setting to 0")
+        if coordinate[0] > real_map_x:
+            coordinate[0] = real_map_x
+            print("WARNING: PathPlanner: Coordinate X > map width, setting to map width")
+        if coordinate[1] < 0:
+            coordinate[1] = 0
+            print("WARNING: PathPlanner: Coordinate Y < 0, setting to 0")
+        if coordinate[1] > real_map_y:
+            coordinate[1] = real_map_y
+            print("WARNING: PathPlanner: Coordinate Y > map height, setting to map height")
+
         # map array size in [rows, columns] - corresponds to y,x. Translated to same coordinate frame:
-        map_array_x = self.map.shape[1] - 1
-        map_array_y = self.map.shape[0] - 1
+        map_array_x = self.map.shape[1]
+        map_array_y = self.map.shape[0]
 
         # divide array size by feet
         row_multiplier = map_array_y / real_map_y
         col_multiplier = map_array_x / real_map_x
 
         # translate coordinates to array indeces
-        row = int((real_map_y - coordinates[1]) * row_multiplier)
-        col = int(coordinates[0] * col_multiplier)
+        row = int((real_map_y - coordinate[1]) * row_multiplier)
+        col = int(coordinate[0] * col_multiplier)
 
         return row, col
 
@@ -776,12 +804,24 @@ class PathPlanner():
         current_coord = self.coordinates_from_pos(self.start_node.pos)
         current_angle = 0
 
-        while self.plan_path: # while there's a path to follow
+        while self.path: # while there's a path to follow
+            # print("Steps left in path: {}".format(len(self.path)))
             message, current_coord, current_angle = self.get_action(current_coord, current_angle, test=True)
-            print(message)
+            print(message + " STEPS LEFT:{}".format(len(self.path)))
             # self.make_message(angle =.14159262, distance=164.345)
 
         print("END")
+
+    def debug(self):
+        coordinates = [16,16]
+        row, col = self.pos_from_coordinates(coordinates)
+
+        # 24, 11
+        pos = [-1, -15]
+        real_x, real_y = self.coordinates_from_pos(pos)
+
+        # 7.75, 15
+        print([real_x, real_y])
 
 if __name__ == '__main__':
     path_planner = PathPlanner()
@@ -797,5 +837,6 @@ if __name__ == '__main__':
     path_planner.set_end_node()
 
     path_planner.run()
+    # path_planner.debug()
 
     # path_planner.ser.close()

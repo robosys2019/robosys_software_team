@@ -110,6 +110,7 @@ class PathPlanner():
         self.completed_path = []
         self.target_nodes = []
         self.start_coord = start_coord
+        self.accuracy_check = 0 # add 1 when location not what expected
 
         # self.ser = serial.Serial('/dev/ttyUSB0', 9600)
         # self.ser.close()
@@ -128,7 +129,7 @@ class PathPlanner():
         self.map = map
         return
 
-    def set_targets(self, coordinates=[[0,0], [7.75, 15]]):
+    def set_targets(self, coordinates=[[0,0], [3,3], [7.75, 15]]):
         '''
         Function: set_targets
         Inputs: Real life coordinates of targets -- list of [x,y]
@@ -145,22 +146,6 @@ class PathPlanner():
             self.target_nodes.append(target_node)
 
         return
-
-    def sort_targets(self):
-        '''
-        Function: sort_targets
-        Inputs: None
-        Default: None
-        Returns: None
-        Calls: self.target_nodes
-        Notes: sorts target_nodes into most efficient order
-        '''
-        target_pos = []
-        for i in range(len(self.target_nodes)):
-            pos = self.pos_from_coordinates(self.target_nodes[i])
-            target_pos.append(pos)
-
-        # TODO HERE: Euclidian fom
 
     def calculate_h(self, pos):
         '''
@@ -188,13 +173,15 @@ class PathPlanner():
         Default: None
         Returns: total_g (list of g cost for each pos given)
         Calls: self.map
-        Notes: cost currently calculated based on slop
+        Notes: Returns cost to node from previous node. Cost currently calculated based on slope
         TODO: modify to correct cost calculations
         '''
         # Generic g cost from current to neighboring points
+        scale_factor = 1
         generic_cost = [1.4, 1, 1.4,
                 1, 1,
                 1.4, 1, 1.4]
+        generic_cost = [x*scale_factor for x in generic_cost]
 
         # add weight of value (slope) in array
         slope_weight = []
@@ -203,7 +190,7 @@ class PathPlanner():
         for i in range(0,len(positions)):
             current_pos = positions[i]
             if current_pos: # If the position exists
-                slope = self.map[current_pos[0],current_pos[1]]
+                slope = abs(self.map[current_pos[0],current_pos[1]])
                 slope_weight.append(slope)
             else:
                 slope_weight.append(0)
@@ -617,14 +604,6 @@ class PathPlanner():
         current_angle = angle # counterclockwise from x, radians
         incoming_message = message # stuck/other status
 
-        if not self.path:
-            if current_coord == self.coordinates_from_pos(self.end_node.pos):
-                print("Target reached!")
-            else:
-                print("WARNING: PathPlanner: NO PATH! Plan again to reach target")
-                # TODO: re-plan path
-            return
-
         if incoming_message == "stuck":
             # TODO: re-path plan
             current_pos = self.pos_from_coordinates(current_coord)
@@ -636,8 +615,28 @@ class PathPlanner():
         # Completed path starts at start_node
         self.completed_path.append(self.path[0])
         self.path.pop(0)
-        next_pos = self.path[0]
 
+        if not self.path:
+            if current_coord == self.coordinates_from_pos(self.end_node.pos):
+                print("Target reached!")
+            else:
+                print("WARNING: PathPlanner: NO PATH! Plan again to reach target")
+                # TODO: re-plan path
+            if test:
+                return "ACTION: DONE", None, None
+            return
+
+        # Check accuracy (if current pos is where we expected to be)
+        if self.completed_path[-1] != self.pos_from_coordinates(current_coord):
+            self.accuracy_check = self.accuracy_check + 1
+            if self.accuracy_check > 3: # off three times in a row
+                print("STOP! Rover is off course")
+                if test:
+                    return "ACTION: STOP", None, None
+        else:
+            self.accuracy_check = 0
+
+        next_pos = self.path[0]
         target_pos = next_pos # row, col
         target_coord = self.coordinates_from_pos(target_pos)
         target_angle = self.angle_between_coordinates(current_coord, target_coord)
@@ -793,7 +792,7 @@ class PathPlanner():
         Default:
         Returns:
         Calls:
-        Notes: TODO -- want to update nogo if area not passable ("got stuck")
+        Notes: want to update nogo if area not passable ("got stuck")
         '''
         self.map[pos[0], pos[1]] = threshold_val
 
@@ -808,34 +807,30 @@ class PathPlanner():
         '''
 
         print("BEGIN")
+        print("END")
 
-        # Testing one round of path planning and message sending
-        # (Ex: from beginning to target 1)
-        self.start_node = self.target_nodes[0]
-        self.end_node = self.target_nodes[1]
+    def test_action(self):
+        self.start_node = self.target_nodes[1]
+        self.end_node = self.target_nodes[-1]
         self.plan_path(plot_path=False)
-
+        
         current_coord = self.coordinates_from_pos(self.start_node.pos)
         current_angle = 0
 
         while self.path: # while there's a path to follow
             # print("Steps left in path: {}".format(len(self.path)))
             message, current_coord, current_angle = self.get_action(current_coord, current_angle, test=True)
+            c0, c1 = current_coord[0], current_coord[1]
+            current_coord = [c0-3, c1]
             print(message + " STEPS LEFT:{}".format(len(self.path)))
             # self.make_message(angle =.14159262, distance=164.345)
 
-        print("END")
-
     def debug(self):
-        self.start_node = self.target_nodes[0]
-        self.end_node = self.target_nodes[1]
-        # self.plan_path(plot_path=False)
-        # print(self.path)
-        test_node = Node(pos=[0,10])
-        print(type(test_node.pos))
-        print(type(self.end_node.pos))
-        if (test_node == self.end_node):
-            print("yep")
+        self.start_node = self.target_nodes[1]
+        self.end_node = self.target_nodes[-1]
+        self.plan_path(plot_path=True)
+        self.plot_final_path()
+        print(self.path)
 
 if __name__ == '__main__':
     path_planner = PathPlanner()
@@ -851,7 +846,8 @@ if __name__ == '__main__':
     # path_planner.set_end_node()
     path_planner.set_targets()
 
-    path_planner.run()
+    # path_planner.run()
     # path_planner.debug()
+    path_planner.test_action()
 
     # path_planner.ser.close()

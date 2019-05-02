@@ -663,16 +663,17 @@ class PathPlanner():
 
     def make_message(self, angle=0, distance=0, size=6):
         # TODO: Check this format
-        length = int(size/2)
-        angle_str = str(angle)[:length]
-        dist_str = str(distance)[:length]
-        #message = angle_str + dist_str
-        message = bytearray([angle, distance])
+        angle_msg = int(angle* 180 / math.pi)
+        distance_msg = int(distance*12)
+        print(bytes(angle_msg))
+
+        message = bytearray([bytes(angle_msg), bytes(distance_msg)])
+        #print(len(bytearray))
         # ^ this probably needs to change based on the format of angle and distance
 
         # print(message)
         # self.ser.write(message)
-        return message
+        #return message
     
     '''
     Function: 
@@ -808,7 +809,7 @@ class PathPlanner():
             # print("Steps left in path: {}".format(len(self.path)))
             message, current_coord, current_angle = self.get_action(current_coord, current_angle, test=True)
             print(message + " STEPS LEFT:{}".format(len(self.path)))
-            # self.make_message(angle =.14159262, distance=164.345)
+            self.make_message(angle =.14159262, distance=164.345)
 
         print("END")
 

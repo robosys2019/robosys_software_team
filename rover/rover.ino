@@ -3,7 +3,7 @@
 #include "neopixel_led.h"
 #include <Servo.h>
 
-#define MESSAGE_LENGTH 8
+#define MESSAGE_LENGTH 3
 #define SERIAL_BAUD 9600
 
 char *buff[MESSAGE_LENGTH];
@@ -11,6 +11,9 @@ void (*fcnPtr)() = wait_for_command;
 Neopixel_leds n;
 
 Servo left, right;
+
+short angle;
+byte distance;
 
 void setup(){
     Serial.begin(SERIAL_BAUD);
@@ -29,6 +32,7 @@ void wait_for_command(){
     n.waiting();
     if(Serial.available()){
         Serial.readBytes(*buff, MESSAGE_LENGTH);
+
         fcnPtr = command;
     }
     wdt_reset();
@@ -37,8 +41,15 @@ void wait_for_command(){
 
 void command(){
     // Parse the movement
+
+    // 2 bytes for 0-360 degrees of rotation
+    // 1 byte for 0-255 inches (up to ~21 feet, more than enough)
+    angle = buff;
     n.turn_left();
 
+    //
+
+    Serial.print(255); // command for done
 }
 
 void check_ir(){

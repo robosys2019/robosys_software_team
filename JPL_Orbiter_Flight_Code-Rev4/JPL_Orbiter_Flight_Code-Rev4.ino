@@ -46,6 +46,7 @@ int dropServoAngleOld = hookOpen;
 int tractionMotorSpeed = stopOrbiter ;    //create global traction motor speed 
 int tractionMotorSpeedOld = stopOrbiter;
 int cycleCount = 0;                       //realtime think delay variable
+volatile unsigned long position = 0;
 boolean aliveLEDState = true;             //create a name for alive blinky light 
 boolean realTimeRunStop = true;           //create a name for real time control loop flag
 String command = "pauseHome";              //create a String object name for operator command string
@@ -87,6 +88,8 @@ void setup() {
    delay(1000);
   tractionServo.write(stopOrbiter);
    delay(1000);
+
+  attachInterrupt(digitalPinToInterrupt(2), Encoder_interrupt, CHANGE);
    
   tone(soundPin,1000,600);                    //Play start warning sound
   delay(600);
@@ -94,6 +97,7 @@ void setup() {
   delay(600);
   tone(soundPin,600,300);                     //Play start warning sound
   delay(600);  
+  position = 0;                               //Reset the position once homed
 }
 
 //==================================================================================================
@@ -283,6 +287,11 @@ String getOperatorInput(){
 // SENSE functions sense---sense---sense---sense---sense---sense---sense---sense---sense---
 // place sense functions here
 
+void Encoder_interrupt(){
+  if(tractionMotorSpeed > 90){
+    position += 1;
+  }
+}
 
 // THINK functions think---think---think---think---think---think---think---think---think---
 // place think functions here
@@ -291,7 +300,8 @@ String Think_pauseHome (int cyclesToWait){            // waits at home for 5 cyc
   tractionMotorSpeed = stopOrbiter;                   // stop traction drive 0 =down 90=off 180=home
   cycleCount = cycleCount + 1;                        // increment cycles
   if(cycleCount > cyclesToWait){
-  cycleCount = 0;                                     // reset count  
+  cycleCount = 0;                                     // reset count 
+  position = 0;
   dropServoAngle = hookClosed;                        // close drop servo hook  
   return("moveDownRange");
   }
@@ -305,6 +315,7 @@ String Think_pauseHome (int cyclesToWait){            // waits at home for 5 cyc
 String Think_moveDownRange (int rangeToTarget){       // Moves orbiter down range with closed hook
   tractionMotorSpeed = moveDown;                      // run orbiter down range
   beepSound = runSound;  
+  Serial.println(position);
   if (rangeToTarget > 250) {                          // drop rover when taregt gets in range 300
   return("dropRobot");
   }

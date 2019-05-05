@@ -543,7 +543,7 @@ class PathPlanner():
             real_y = real_map_y
             print("WARNING: PathPlanner: Coordinate Y > map height, setting to map height")
 
-        return real_x, real_y
+        return [real_x, real_y]
 
     def pos_from_coordinates(self, coordinate):
         '''
@@ -627,7 +627,13 @@ class PathPlanner():
             return
 
         # Check accuracy (if current pos is where we expected to be)
-        if self.completed_path[-1] != self.pos_from_coordinates(current_coord):
+        curr_pos = self.pos_from_coordinates(current_coord)
+        expected_pos = self.completed_path[-1]
+        tolerance = .5
+        low = [x - tolerance for x in expected_pos]
+        high = [x + tolerance for x in expected_pos]
+        # if self.completed_path[-1] != self.pos_from_coordinates(current_coord):
+        if (curr_pos > high) or (curr_pos < low):
             self.accuracy_check = self.accuracy_check + 1
             if self.accuracy_check > 3: # off three times in a row
                 print("STOP! Rover is off course")
@@ -832,6 +838,30 @@ class PathPlanner():
         self.plot_final_path()
         print(self.path)
 
+    def test_rover_movement(self):
+        width_path = [[0,0], [1,0],[2,0],[3,0], [4,0], [5,0]]
+        for i in range(0,len(width_path)):
+            width_path[i] = self.pos_from_coordinates(width_path[i])
+        self.path = width_path
+        self.start_node = Node(pos = self.path[0])
+        self.end_node = Node(pos = self.path[-1])
+        # self.plot_final_path()
+
+        # for i in range(0,len(self.path)):
+        #     pos = self.path[i]
+        #     coordinate2 = self.coordinates_from_pos(pos)
+        #     print("{} {}".format(pos, coordinate2))
+
+        current_coord = self.coordinates_from_pos(self.start_node.pos)
+        current_angle = 0
+        print(current_coord)
+
+        while len(self.path) > 1:
+            message, current_coord, current_angle = self.get_action(current_coord, current_angle, test=True)
+            print(message + " STEPS LEFT:{}".format(len(self.path)))
+
+        return
+
 if __name__ == '__main__':
     path_planner = PathPlanner()
 
@@ -844,10 +874,11 @@ if __name__ == '__main__':
     path_planner.set_map(lowres_map)
     # path_planner.set_start_node()
     # path_planner.set_end_node()
-    path_planner.set_targets()
+    # path_planner.set_targets()
 
     # path_planner.run()
     # path_planner.debug()
-    path_planner.test_action()
+    # path_planner.test_action()
+    path_planner.test_rover_movement()
 
     # path_planner.ser.close()

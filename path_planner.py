@@ -670,16 +670,16 @@ class PathPlanner():
         Notes:
         '''
         # TODO: Check this format
-        length = int(size/2)
-        angle_str = str(angle)[:length]
-        dist_str = str(distance)[:length]
-        #message = angle_str + dist_str
-        message = bytearray([angle, distance])
-        # ^ this probably needs to change based on the format of angle and distance
+        angle_deg = int(angle* 180 / math.pi)
+        if(angle_deg >= 256):
+            angle_msg = [angle_deg-255, 255]
+        else:
+            angle_msg = [0,angle_deg]
 
-        # print(message)
+        distance_msg = int(distance*12)
+
+        message = bytearray([angle_msg[0], angle_msg[1], distance_msg])
         # self.ser.write(message)
-        return message
     
     def angle_between_coordinates(self, start_coordinate, end_coordinate):
         '''
@@ -829,7 +829,7 @@ class PathPlanner():
             c0, c1 = current_coord[0], current_coord[1]
             current_coord = [c0-3, c1]
             print(message + " STEPS LEFT:{}".format(len(self.path)))
-            # self.make_message(angle =.14159262, distance=164.345)
+            self.make_message(angle =.14159262, distance=4.345)
 
     def debug(self):
         self.start_node = self.target_nodes[1]

@@ -670,14 +670,15 @@ class PathPlanner():
         Notes:
         '''
         # TODO: Check this format
-        length = int(size/2)
-        angle_str = str(angle)[:length]
-        dist_str = str(distance)[:length]
-        #message = angle_str + dist_str
-        message = bytearray([angle, distance])
-        # ^ this probably needs to change based on the format of angle and distance
+        angle_deg = int(angle* 180 / math.pi)
+        if(angle_deg >= 256):
+            angle_msg = [angle_deg-255, 255]
+        else:
+            angle_msg = [0,angle_deg]
 
-        # print(message)
+        distance_msg = int(distance*12)
+
+        message = bytearray([angle_msg[0], angle_msg[1], distance_msg])
         # self.ser.write(message)
         return message
     

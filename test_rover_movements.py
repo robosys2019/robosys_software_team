@@ -13,7 +13,7 @@ class RoverMovementTest():
         lowres_map = map_maker.get_lowres_map()
         self.path_planner.set_map(lowres_map)
 
-    def run_width_test(self, test=False):
+    def width_test(self, test=False):
         # create path along bottom of map (left to right)
         # assume rover placed parallel to x axis, moving positive (angle 0)
         path = [[0,0], [1,0],[2,0],[3,0], [4,0], [5,0]]
@@ -31,10 +31,11 @@ class RoverMovementTest():
                 message, current_coord, current_angle = self.path_planner.get_action(current_coord, current_angle, test=True)
                 print(message + " STEPS LEFT:{}".format(len(self.path_planner.path)))
             else:
-                self.path_planner.get_action(current_coord, current_angle, test=False)
+                message = self.path_planner.get_action(current_coord, current_angle, test=False)
+                print("PathPlanner: Message sent")
         return
 
-    def one_step(self, test=False):
+    def one_step_test(self, test=False):
         path = [[0,0], [1,0]]
         for i in range(0,len(path)):
             path[i] = self.path_planner.pos_from_coordinates(path[i])
@@ -45,17 +46,30 @@ class RoverMovementTest():
         current_coord = self.path_planner.coordinates_from_pos(self.path_planner.start_node.pos)
         current_angle = 0
 
-        while len(self.path_planner.path) > 1:
-            if test:
-                message, current_coord, current_angle = self.path_planner.get_action(current_coord, current_angle, test=True)
-                print(message + " STEPS LEFT:{}".format(len(self.path_planner.path)))
-            else:
-                self.path_planner.get_action(current_coord, current_angle, test=False)
+        if test:
+            message, current_coord, current_angle = self.path_planner.get_action(current_coord, current_angle, test=True)
+            print(message + " STEPS LEFT:{}".format(len(self.path_planner.path)))
+        else:
+            message = self.path_planner.get_action(current_coord, current_angle, test=False)
+            print("PathPlanner: Message sent")
+
         return
 
 if __name__ == '__main__':
     rover_movement_test = RoverMovementTest()
 
-    # test cases:
-    # rover_movement_test.run_width_test()
-    rover_movement_test.one_step()
+    ## test cases:
+
+    ## to debug width_test:
+    # rover_movement_test.width_test(test=True)
+
+    ## to run width_test:
+    # rover_movement_test.width_test()
+
+    ## to debug one_step_test:
+    # rover_movement_test.one_step_test(test=True)
+
+    ## to run one_step_test:
+    # rover_movement_test.one_step_test()
+    
+    

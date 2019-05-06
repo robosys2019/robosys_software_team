@@ -531,17 +531,17 @@ class PathPlanner():
 
         # make sure coordinates exist:
         if real_x < 0:
+            print("WARNING: PathPlanner: Coordinate X ({}) < 0, setting to 0".format(real_x))
             real_x = 0
-            print("WARNING: PathPlanner: Coordinate X < 0, setting to 0")
         if real_x > real_map_x:
+            print("WARNING: PathPlanner: Coordinate X ({}) > map width, setting to map width ({})".format(real_x, real_map_x))
             real_x = real_map_x
-            print("WARNING: PathPlanner: Coordinate X > map width, setting to map width")
         if real_y < 0:
+            print("WARNING: PathPlanner: Coordinate Y ({}) < 0, setting to 0".format(real_y))
             real_y = 0
-            print("WARNING: PathPlanner: Coordinate Y < 0, setting to 0")
         if real_y > real_map_y:
+            print("WARNING: PathPlanner: Coordinate Y ({}) > map height, setting to map height ({})".format(real_map_y))
             real_y = real_map_y
-            print("WARNING: PathPlanner: Coordinate Y > map height, setting to map height")
 
         return [real_x, real_y]
 
@@ -572,16 +572,16 @@ class PathPlanner():
 
         # make sure coordinates exist:
         if row < 0:
-            print("WARNING: PathPlanner: Pos Row {} < 0, setting to 0".format(row))
+            print("WARNING: PathPlanner: Pos Row ({}) < 0, setting to 0".format(row))
             row = 0
         if col >= map_array_x:
-            print("WARNING: PathPlanner: Pos Col {} > num cols, setting to max col".format(col))
+            print("WARNING: PathPlanner: Pos Col ({}) > num cols, setting to max col ({})".format(col, map_array_x-1))
             col = map_array_x - 1
         if col < 0:
-            print("WARNING: PathPlanner: Pos Col {} < 0, setting to 0".format(col))
+            print("WARNING: PathPlanner: Pos Col ({}) < 0, setting to 0".format(col))
             col = 0
         if row >= map_array_y:
-            print("WARNING: PathPlanner: Pos Row {} > num rows, setting to max row".format(row))
+            print("WARNING: PathPlanner: Pos Row ({}) > num rows, setting to max row ({})".format(row, map_array_y-1))
             row = map_array_y - 1
 
         return [row, col]
@@ -623,7 +623,7 @@ class PathPlanner():
                 print("WARNING: PathPlanner: NO PATH! Plan again to reach target")
                 # TODO: re-plan path
             if test:
-                return "ACTION: DONE", None, None
+                return "ACTION: NO PATH", None, None
             return
 
         # Check accuracy (if current pos is where we expected to be)
@@ -656,9 +656,9 @@ class PathPlanner():
             message = "DIST: %0.3f  ANGLE: %0.3f" % (delta_distance, delta_angle)
             return message, target_coord, target_angle
 
-        message = self.make_message(delta_angle, delta_distance)
-            
-        return message
+        else:
+            message = self.make_message(delta_angle, delta_distance)    
+            return message
 
     def make_message(self, angle=0, distance=0, size=6):
         '''
@@ -670,16 +670,16 @@ class PathPlanner():
         Notes:
         '''
         # TODO: Check this format
-        angle_deg = int(angle* 180 / math.pi)
-        if(angle_deg >= 256):
-            angle_msg = [angle_deg-255, 255]
-        else:
-            angle_msg = [0,angle_deg]
+        length = int(size/2)
+        angle_str = str(angle)[:length]
+        dist_str = str(distance)[:length]
+        #message = angle_str + dist_str
+        message = bytearray([angle, distance])
+        # ^ this probably needs to change based on the format of angle and distance
 
-        distance_msg = int(distance*12)
-
-        message = bytearray([angle_msg[0], angle_msg[1], distance_msg])
+        # print(message)
         # self.ser.write(message)
+        return message
     
     def angle_between_coordinates(self, start_coordinate, end_coordinate):
         '''
@@ -829,7 +829,7 @@ class PathPlanner():
             c0, c1 = current_coord[0], current_coord[1]
             current_coord = [c0-3, c1]
             print(message + " STEPS LEFT:{}".format(len(self.path)))
-            self.make_message(angle =.14159262, distance=4.345)
+            # self.make_message(angle =.14159262, distance=164.345)
 
     def debug(self):
         self.start_node = self.target_nodes[1]

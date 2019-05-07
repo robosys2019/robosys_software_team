@@ -15,6 +15,8 @@ public:
     void deploying();
     void turn_right();
     void turn_left();
+    void move_forward();
+    void move_reverse();
 
 private:
     CRGB leds[NUM_LEDS];

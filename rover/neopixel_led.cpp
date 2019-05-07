@@ -53,4 +53,10 @@ void Neopixel_leds::turn_left(){
     FastLED.show();
 }
 
+void Neopixel_leds::move_forward(){
 
+}
+
+void Neopixel_leds::move_reverse(){
+    
+}

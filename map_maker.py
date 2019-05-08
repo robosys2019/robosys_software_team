@@ -146,6 +146,14 @@ class MapMaker():
         self.map[threshold_indeces] = 0
         return
 
+    def go_nogo(self, threshold_val=None):
+        '''
+        Function: go_nogo
+        Inputs: 
+        Notes: TODO
+        '''
+        return
+
     '''
     Function: run
     Inputs: none

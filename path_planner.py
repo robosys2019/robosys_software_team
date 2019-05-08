@@ -1,5 +1,4 @@
 """
-Debug: checking merge
 modified from:
 https://medium.com/@nicholas.w.swift/easy-a-star-pathfinding-7e6689c7f7b2
 
@@ -14,17 +13,20 @@ https://www.redblobgames.com/pathfinding/a-star/introduction.html
 INPUT:
 - rover pos
 
+STATUS:
+- reformatting to 3 way points instead of start_node, end_node
+
 TODO:
 
-- return action & arc
-        - example actions: "GET UNSTUCK" "FOLLOW PATH"
-        - Might only want to pass arc when it detects it has reached the end of the old path
-
 - Compare location to expected location
+
 - create metrics for movement
         - What I thnk is happening based on loction history and when to intervene
-- re-format map to slope and set go/no go areas-- CHANGE THE MAP-MAKER
+
+- Set go/no go areas-- CHANGE THE MAP-MAKER
+
 - plan most efficient path through given 3 points and set target order
+
 - Think about possible limitting physical cases
 
 """
@@ -39,13 +41,11 @@ import seaborn as sns
 import random
 from map_maker import MapMaker
 import math
+import serial
 
 """
 Node functions:
-TODO
-
-Notes:
-- Origin of map is in the bottom left corner. X goes to the right, Y goes up. However, pos goes [row, column] from top left corner. I'm dealing with this by creating coordinate varialbes in the Node class, different from pos variables which tell you the pos in the map array.
+TODO: documentation
 """
 
 class Node():
@@ -101,67 +101,61 @@ Notes:
 """
 
 class PathPlanner():
-    def __init__(self):
+    def __init__(self, start_coord=[0,0]):
         self.map = []
         self.start_node = None
         self.end_node = None
         self.path = None
-        self.real_map_size = [7.75, 15] # size in feet of map. 
+        self.real_map_size = [7.75, 15] # size in feet of map.
+        self.completed_path = []
+        self.target_nodes = []
+        self.start_coord = start_coord
+        self.accuracy_check = 0 # add 1 when location not what expected
 
-    '''
-    Function: set_map
-    Inputs: map (ndarray)
-    Default: None
-    Returns: None
-    Calls: None
-    Notes: Sets global variable 'self.map'
-    '''
+        # self.ser = serial.Serial('/dev/ttyUSB0', 9600)
+        # self.ser.close()
+        # self.ser.open() 
 
     def set_map(self, map):
+        '''
+        Function: set_map
+        Inputs: map (ndarray)
+        Default: None
+        Returns: None
+        Calls: None
+        Notes: Sets global variable 'self.map'
+        '''
         print("PathPlanner: RECEIVED MAP")
         self.map = map
         return
 
-    '''
-    Function: set_start_node
-    Inputs: Real life coordinates of start [x,y]
-    Default: start_node = node with real life coordinate 0,0
-    Returns: None
-    Calls: Node.pos_from_coordinates
-    Notes: Sets global variable 'start_node'
-    '''
+    def set_targets(self, coordinates=[[0,0], [3,3], [7.75, 15]]):
+        '''
+        Function: set_targets
+        Inputs: Real life coordinates of targets -- list of [x,y]
+        Default: list of coordinates - start [0,0], end [7.75, 15] real map coord frame
+        Returns: None
+        Calls: Node, pos_from_coordinates, self.target_nodes
+        Notes: makes list of target nodes (payload drop points), unsorted
+        '''
+        for i in range(0, len(coordinates)):
+            target_coord = coordinates[i]
+            target_pos = self.pos_from_coordinates(target_coord)
+            print("PathPlanner: SETTING TARGET NODE {}: Coordinate: {}  Position: {}".format(i, target_coord, target_pos))
+            target_node = Node(pos=target_pos)
+            self.target_nodes.append(target_node)
 
-    def set_start_node(self, coordinates=[0,0]):
-        print("PathPlanner: SETTING START NODE")
-        row, col = self.pos_from_coordinates(coordinates=coordinates)
-        self.start_node = Node(pos=[row, col])
         return
-
-    '''
-    Function: set_end_node
-    Inputs: Real life coordinates of target [x,y]
-    Default: end_node = node with real life coordinate 7.75, 16 (assume map size 7.75, 16 ft)
-    Returns: None
-    Calls: None
-    Notes: Sets global variable 'end_node'
-    '''
-
-    def set_end_node(self, coordinates=[7.75,16]):
-        print("PathPlanner: SETTING END NODE")
-        row, col = self.pos_from_coordinates(coordinates=coordinates)
-        self.end_node = Node(pos=[row, col])
-        return
-
-    '''
-    Function: calculate_h
-    Inputs: pos (tuple)
-    Default: None
-    Returns: h (distance from current node to end node)
-    Calls: self.end_node
-    Notes: Returns cost from current node to goal
-    '''
 
     def calculate_h(self, pos):
+        '''
+        Function: calculate_h
+        Inputs: pos (tuple)
+        Default: None
+        Returns: h (distance from current node to end node)
+        Calls:
+        Notes: Returns cost from current node to goal
+        '''
         # calculate distance from current node to end node
         x = pos[1] # column index
         y = pos[0] # row index
@@ -172,25 +166,22 @@ class PathPlanner():
         h = m.sqrt((x-end_x)**2 + (y-end_y)**2) * 500 # simple triangle dist formula to end: a^2 + b^2 = c^2
         return h
 
-    '''
-    Function: calculate_g
-    Inputs: positions (list of position tuples)
-    Default: None
-    Returns: total_g (list of g cost for each pos given)
-    Calls: self.map
-    Notes: cost currently calculated based on slop
-    TODO: modify to correct cost calculations
-    '''
-
     def calculate_g(self, positions):
-        """
-        Takes list of neighbors and returns an array of weights to match them (the first weight is for the first neighbor, second to the second, etc.)
-        calculates g cost with combo of 
-        """
+        '''
+        Function: calculate_g
+        Inputs: positions (list of position tuples)
+        Default: None
+        Returns: total_g (list of g cost for each pos given)
+        Calls: self.map
+        Notes: Returns cost to node from previous node. Cost currently calculated based on slope
+        TODO: modify to correct cost calculations
+        '''
         # Generic g cost from current to neighboring points
+        scale_factor = 1
         generic_cost = [1.4, 1, 1.4,
                 1, 1,
                 1.4, 1, 1.4]
+        generic_cost = [x*scale_factor for x in generic_cost]
 
         # add weight of value (slope) in array
         slope_weight = []
@@ -199,7 +190,7 @@ class PathPlanner():
         for i in range(0,len(positions)):
             current_pos = positions[i]
             if current_pos: # If the position exists
-                slope = self.map[current_pos[0],current_pos[1]]
+                slope = abs(self.map[current_pos[0],current_pos[1]])
                 slope_weight.append(slope)
             else:
                 slope_weight.append(0)
@@ -208,21 +199,21 @@ class PathPlanner():
         ##print(total_g)
         return total_g
 
-    '''
-    Function: get_neighbors
-    Inputs: node (Node)
-    Default: None
-    Returns: neighbors (list of Nodes)
-    Calls: self.map
-    Notes: Returns positions of currect node's neighbors in 1d array from top left to bottom right. Deals with corner, edge, and general cases.
-    '''
-
     def get_neighbors(self, node):
+        '''
+        Function: get_neighbors
+        Inputs: node (Node)
+        Default: None
+        Returns: neighbors (list of Nodes)
+        Calls: self.map
+        Notes: Returns positions of currect node's neighbors in 1d array from top left to bottom right. Deals with corner, edge, and general cases.
+        '''
         """
         Return positions of current node's neighbors in 1d array from top left to bottom right
 
         This deals with corner and edge cases, and calls all else the general case
         """
+        
         neighbors = []
         row = node.pos[0]
         col = node.pos[1]
@@ -296,21 +287,15 @@ class PathPlanner():
 
         return neighbors
 
-    '''
-    Function: plan_path
-    Inputs: None
-    Default: plot_path = False (won't plot path in progress)
-    Returns: path (list of Nodes from start to end)
-    Calls: se;f.initialize_plot(), self.start_node, self.get_neighbors(), self.calculate_g(), self.calculate_h(), self.update_plot(), self.end_node
-    Notes: Plans a path from self.start_node to self.end_node using A*
-    '''
-
     def plan_path(self, plot_path=False):
-        """
-        This plans a path using A*
-        It calls get_neighbors to obtain the neighbors of the current node
-        It calls calculate_g_cost to obtain the g cost for the neighboring points.
-        """
+        '''
+        Function: plan_path
+        Inputs: None
+        Default: plot_path = False (won't plot path in progress)
+        Returns: path (list of Nodes from start to end)
+        Calls: self.initialize_plot(), self.get_neighbors(), self.calculate_g(), self.calculate_h(), self.update_plot()
+        Notes: Plans a path from give start_node to given end_node using A*
+        '''
 
         print("PathPlanner: BEGIN PATH PLANNING")
         if plot_path:
@@ -354,6 +339,7 @@ class PathPlanner():
             open_set.pop(0)
 
             if (current_node == self.end_node):
+                print("END NODE REACHED")
                 break
 
             neighbors_pos = self.get_neighbors(current_node)
@@ -402,7 +388,7 @@ class PathPlanner():
             # sort open set again
             open_set = sorted(open_set, key=Node.get_f)
 
-        print("END PATH PLANNING")
+        print("PathPlanner: END PATH PLANNING")
         plt.show()
 
         # curious to see how many steps it took
@@ -418,17 +404,16 @@ class PathPlanner():
         self.path = path
         return
 
-    '''
-    Function: initialize_plot
-    Inputs: None
-    Default: None
-    Returns: None
-    Calls: self.map, self.start_node, self.end_node
-    Notes: Makes heat map of map with start and end nodes overlaid. The path is later drawn over this.
-    start_x and start_y correspond to col, row indeces, as do end_x and end_y
-    '''
-
     def initialize_plot(self):
+        '''
+        Function: initialize_plot
+        Inputs: None
+        Default: None
+        Returns: None
+        Calls: self.map
+        Notes: Makes heat map of map with start and end nodes overlaid. The path is later drawn over this.
+        start_x and start_y correspond to col, row indeces, as do end_x and end_y
+        '''
         print("INITIALIZING PLOT")
         sns.heatmap(self.map, cmap="YlGnBu")
 
@@ -448,18 +433,17 @@ class PathPlanner():
         plt.legend((start, end), ('Start', 'End'))
         return
 
-    '''
-    Function: update_plot
-    Inputs: current_pos, neighbors_pos
-    Default: None
-    Returns: None
-    Calls: None
-    Notes: Overlays scatter plot with current node and neighbors over initialized plot
-    x and y correspond to col, row indeces
-    '''
-
     def update_plot(self, current_pos, neighbors_pos):
         """
+        '''
+        Function: update_plot
+        Inputs: current_pos, neighbors_pos
+        Default: None
+        Returns: None
+        Calls: None
+        Notes: Overlays scatter plot with current node and neighbors over initialized plot
+        x and y correspond to col, row indeces
+        '''
         """
         # plot neighbors 
         x = []
@@ -477,17 +461,16 @@ class PathPlanner():
         plt.pause(0.05)
         return
 
-    '''
-    Function: plot_final_path
-    Inputs: path (list of nodes)
-    Default: None
-    Returns: None
-    Calls: self.map, self.start_node, self.end_node, self.path
-    Notes: Plots the map with path overlain. Shows start and end nodes and the path in between.
-    start_x and start_y correspond to col, row indeces, as do end_x and end_y
-    '''
-
     def plot_final_path(self):
+        '''
+        Function: plot_final_path
+        Inputs: path (list of nodes)
+        Default: None
+        Returns: None
+        Calls: self.map, self.path
+        Notes: Plots the map with path overlain. Shows start and end nodes and the path in between.
+        start_x and start_y correspond to col, row indeces, as do end_x and end_y
+        '''
         """
         This plots the heatmap with the path overlain. It shows the start and end node and the path in between.
         """
@@ -521,19 +504,19 @@ class PathPlanner():
         plt.show()
         return
 
-    '''
-    Function: 
-    Inputs:
-    Default:
-    Returns:
-    Calls:
-    Notes:
-    '''
-
     def coordinates_from_pos(self, pos):
+        '''
+        Function: coordinates_from_pos
+        Inputs: pos (row, column in map array)
+        Default: None
+        Returns: real_x, real_x (real world coordinates with bottom left origin in map)
+        Calls: self.real_map, self.map
+        Notes: Used in [TODO: fill]
+        '''
         # real map size in [x,y] (bottom left origin)
         real_map_x = self.real_map_size[0]
         real_map_y = self.real_map_size[1]
+
         # map array size in [rows, columns] - corresponds to y,x. Translated to same coordinate frame:
         map_array_x = self.map.shape[1]
         map_array_y = self.map.shape[0]
@@ -546,98 +529,169 @@ class PathPlanner():
         real_x = pos[1] * x_multiplier
         real_y = (map_array_y - pos[0]) * y_multiplier
 
-        return real_x, real_y
+        # make sure coordinates exist:
+        if real_x < 0:
+            print("WARNING: PathPlanner: Coordinate X ({}) < 0, setting to 0".format(real_x))
+            real_x = 0
+        if real_x > real_map_x:
+            print("WARNING: PathPlanner: Coordinate X ({}) > map width, setting to map width ({})".format(real_x, real_map_x))
+            real_x = real_map_x
+        if real_y < 0:
+            print("WARNING: PathPlanner: Coordinate Y ({}) < 0, setting to 0".format(real_y))
+            real_y = 0
+        if real_y > real_map_y:
+            print("WARNING: PathPlanner: Coordinate Y ({}) > map height, setting to map height ({})".format(real_map_y))
+            real_y = real_map_y
 
-    '''
-    Function: 
-    Inputs:
-    Default:
-    Returns:
-    Calls:
-    Notes:
-    '''
+        return [real_x, real_y]
 
-    def pos_from_coordinates(self, coordinates):
+    def pos_from_coordinates(self, coordinate):
+        '''
+        Function: pos_from_coordinates
+        Inputs: coordinates (real_x, real_y in real world coordinate frame)
+        Default: None
+        Returns: row, col (indeces in map array)
+        Calls: self.real_map, self.map
+        Notes: Used in [TODO]
+        '''
         # real map size in [x,y] (bottom left origin)
         real_map_x = self.real_map_size[0]
         real_map_y = self.real_map_size[1]
+
         # map array size in [rows, columns] - corresponds to y,x. Translated to same coordinate frame:
-        map_array_x = self.map.shape[1] - 1
-        map_array_y = self.map.shape[0] - 1
+        map_array_x = self.map.shape[1]
+        map_array_y = self.map.shape[0]
 
         # divide array size by feet
         row_multiplier = map_array_y / real_map_y
         col_multiplier = map_array_x / real_map_x
 
         # translate coordinates to array indeces
-        row = int((real_map_y - coordinates[1]) * row_multiplier)
-        col = int(coordinates[0] * col_multiplier)
+        row = int((real_map_y - coordinate[1]) * row_multiplier)
+        col = int(coordinate[0] * col_multiplier)
 
-        return row, col
+        # make sure coordinates exist:
+        if row < 0:
+            print("WARNING: PathPlanner: Pos Row ({}) < 0, setting to 0".format(row))
+            row = 0
+        if col >= map_array_x:
+            print("WARNING: PathPlanner: Pos Col ({}) > num cols, setting to max col ({})".format(col, map_array_x-1))
+            col = map_array_x - 1
+        if col < 0:
+            print("WARNING: PathPlanner: Pos Col ({}) < 0, setting to 0".format(col))
+            col = 0
+        if row >= map_array_y:
+            print("WARNING: PathPlanner: Pos Row ({}) > num rows, setting to max row ({})".format(row, map_array_y-1))
+            row = map_array_y - 1
 
-    '''
-    Function: 
-    Inputs: coordinate (x, y in map), angle (counterclockwise from x, radians)
-    Default:
-    Returns:
-    Calls:
-    Notes:
-    '''
+        return [row, col]
 
-    def get_action(self, coordinate=None, angle=None, message=None):
+    def get_action(self, coordinate=None, angle=None, message=None, test=False):
+        '''
+        Function: get_action
+        Inputs: coordinate (x, y in map), angle (counterclockwise from x, radians)
+        Default: None
+        Returns: message (string to rover containing delta_angle and delta_distance)
+        Calls: self.path, self.coordinates_from_pos, self.angle_between_coordinates, self.calculate_angular_movement, self.calculate_linear_movement, self.make_message
+        Notes: Follows along most recently planned path
+        - Checks if path exists (if not, target reached or error)
+        - Checks if incoming message is stuck (sets pos to no-go area, backs up, re-plans)
+        TODO: Format of stuck/unstuck message
+        '''
         # get message/position update from rover (through main)
         # TODO: need to talk to carl about potential messages
         current_coord = coordinate # x, y in map
         current_angle = angle # counterclockwise from x, radians
+        incoming_message = message # stuck/other status
 
-        if not self.path:
-            print("PathPlanner: NO PATH! PLAN AGAIN")
+        if incoming_message == "stuck":
+            # TODO: re-path plan
+            current_pos = self.pos_from_coordinates(current_coord)
+            self.go_nogo(current_pos)
+            # Carl does backup maneuver (goes to previous location)?
+            # I do backup maneuver
             return
         
-        next_node = self.path[0]
-        target_pos = next_node.pos # row, col
+        # Completed path starts at start_node
+        self.completed_path.append(self.path[0])
+        self.path.pop(0)
+
+        if not self.path:
+            if current_coord == self.coordinates_from_pos(self.end_node.pos):
+                print("Target reached!")
+            else:
+                print("WARNING: PathPlanner: NO PATH! Plan again to reach target")
+                # TODO: re-plan path
+            if test:
+                return "ACTION: NO PATH", None, None
+            return
+
+        # Check accuracy (if current pos is where we expected to be)
+        curr_pos = self.pos_from_coordinates(current_coord)
+        expected_pos = self.completed_path[-1]
+        tolerance = .5
+        low = [x - tolerance for x in expected_pos]
+        high = [x + tolerance for x in expected_pos]
+        # if self.completed_path[-1] != self.pos_from_coordinates(current_coord):
+        if (curr_pos > high) or (curr_pos < low):
+            self.accuracy_check = self.accuracy_check + 1
+            if self.accuracy_check > 3: # off three times in a row
+                print("STOP! Rover is off course")
+                if test:
+                    return "ACTION: STOP", None, None
+        else:
+            self.accuracy_check = 0
+
+        next_pos = self.path[0]
+        target_pos = next_pos # row, col
         target_coord = self.coordinates_from_pos(target_pos)
         target_angle = self.angle_between_coordinates(current_coord, target_coord)
         
-        # get need change in angle:
+        # get needed change in angle:
         delta_angle = self.calculate_angular_movement(current_angle, target_angle)
-
         # get change in distance:
         delta_distance = self.calculate_linear_movement(current_coord, target_coord)
 
-        message = self.make_message(delta_angle, delta_distance)
-            
-        return message
+        if test:
+            message = "DIST: %0.3f  ANGLE: %0.3f" % (delta_distance, delta_angle)
+            return message, target_coord, target_angle
 
-    '''
-    Function: 
-    Inputs:
-    Default:
-    Returns:
-    Calls:
-    Notes:
-    '''
+        else:
+            message = self.make_message(delta_angle, delta_distance)    
+            return message
 
-    def make_message(self, angle=0, distance=0):
+    def make_message(self, angle=0, distance=0, size=6):
+        '''
+        Function: 
+        Inputs:
+        Default:
+        Returns:
+        Calls:
+        Notes:
+        '''
         # TODO: Check this format
-        # For now idk, make each 5 characters (3 decimal places)
-        length = 3
-        angle_str = str(angle)[:length]
-        dist_str = str(distance)[:length]
-        message = angle_str + dist_str
-        print(message)
-        return
-    
-    '''
-    Function: 
-    Inputs:
-    Default:
-    Returns:
-    Calls:
-    Notes:
-    '''
+        angle_deg = int(angle* 180 / math.pi)
+        if(angle_deg >= 256):
+            angle_msg = [angle_deg-255, 255]
+        else:
+            angle_msg = [0,angle_deg]
 
+        distance_msg = int(distance*12)
+
+        message = bytearray([angle_msg[0], angle_msg[1], distance_msg])
+        # self.ser.write(message)
+        return message
+    
     def angle_between_coordinates(self, start_coordinate, end_coordinate):
+        '''
+        Function: 
+        Inputs:
+        Default:
+        Returns:
+        Calls:
+        Notes:
+        '''
+
         # gives you the angle from the start coordinate to end coordinate counterclockwise from x in the map coordinate system, in radians
 
         angle = 0
@@ -681,16 +735,15 @@ class PathPlanner():
         
         return angle
 
-    '''
-    Function: 
-    Inputs:
-    Default:
-    Returns:
-    Calls:
-    Notes:
-    '''
-
     def calculate_angular_movement(self, current_angle, target_angle):
+        '''
+        Function: 
+        Inputs:
+        Default:
+        Returns:
+        Calls:
+        Notes:
+        '''
         # check which way to turn based on whether it's more or less than pi radians away
         # positive if counterclockwise, negative if clockwise
 
@@ -719,16 +772,16 @@ class PathPlanner():
 
         return delta_angle
 
-    '''
-    Function: 
-    Inputs:
-    Default:
-    Returns:
-    Calls:
-    Notes:
-    '''
-
     def calculate_linear_movement(self, start_coordinate, end_coordinate):
+        '''
+        Function: 
+        Inputs:
+        Default:
+        Returns:
+        Calls:
+        Notes:
+        '''
+
         x1, y1 = start_coordinate[0], start_coordinate[1]
         x2, y2 = end_coordinate[0], end_coordinate[1]
 
@@ -739,25 +792,76 @@ class PathPlanner():
 
         return distance
 
-    '''
-    Function: 
-    Inputs:
-    Default:
-    Returns:
-    Calls:
-    Notes:
-    '''
+    def go_nogo(self, pos, threshold_val=10000):
+        '''
+        Function: 
+        Inputs:
+        Default:
+        Returns:
+        Calls:
+        Notes: want to update nogo if area not passable ("got stuck")
+        '''
+        self.map[pos[0], pos[1]] = threshold_val
 
     def run(self):
-        """typical path planner:
+        '''
+        Function: 
+        Inputs:
+        Default:
+        Returns:
+        Calls:
+        Notes:
+        '''
+
         print("BEGIN")
-        #TODO: Call plan_path and plot_path
-        self.plan_path(plot_path=False)
-        self.plot_final_path()
         print("END")
-        #self.plot_path(path)
-        """
-        self.make_message(angle=.14159262, distance=164.345)
+
+    def test_action(self):
+        self.start_node = self.target_nodes[1]
+        self.end_node = self.target_nodes[-1]
+        self.plan_path(plot_path=False)
+        
+        current_coord = self.coordinates_from_pos(self.start_node.pos)
+        current_angle = 0
+
+        while self.path: # while there's a path to follow
+            # print("Steps left in path: {}".format(len(self.path)))
+            message, current_coord, current_angle = self.get_action(current_coord, current_angle, test=True)
+            c0, c1 = current_coord[0], current_coord[1]
+            current_coord = [c0-3, c1]
+            print(message + " STEPS LEFT:{}".format(len(self.path)))
+            # self.make_message(angle =.14159262, distance=164.345)
+
+    def debug(self):
+        self.start_node = self.target_nodes[1]
+        self.end_node = self.target_nodes[-1]
+        self.plan_path(plot_path=True)
+        self.plot_final_path()
+        print(self.path)
+
+    def test_rover_movement(self):
+        width_path = [[0,0], [1,0],[2,0],[3,0], [4,0], [5,0]]
+        for i in range(0,len(width_path)):
+            width_path[i] = self.pos_from_coordinates(width_path[i])
+        self.path = width_path
+        self.start_node = Node(pos = self.path[0])
+        self.end_node = Node(pos = self.path[-1])
+        # self.plot_final_path()
+
+        # for i in range(0,len(self.path)):
+        #     pos = self.path[i]
+        #     coordinate2 = self.coordinates_from_pos(pos)
+        #     print("{} {}".format(pos, coordinate2))
+
+        current_coord = self.coordinates_from_pos(self.start_node.pos)
+        current_angle = 0
+        print(current_coord)
+
+        while len(self.path) > 1:
+            message, current_coord, current_angle = self.get_action(current_coord, current_angle, test=True)
+            print(message + " STEPS LEFT:{}".format(len(self.path)))
+
+        return
 
 if __name__ == '__main__':
     path_planner = PathPlanner()
@@ -769,7 +873,13 @@ if __name__ == '__main__':
     lowres_map = map_maker.get_lowres_map()
 
     path_planner.set_map(lowres_map)
-    path_planner.set_start_node()
-    path_planner.set_end_node()
+    # path_planner.set_start_node()
+    # path_planner.set_end_node()
+    # path_planner.set_targets()
 
-    path_planner.run()
+    # path_planner.run()
+    # path_planner.debug()
+    # path_planner.test_action()
+    path_planner.test_rover_movement()
+
+    # path_planner.ser.close()

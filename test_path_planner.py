@@ -4,10 +4,20 @@ import unittest
 from math import pi
 
 from path_planner import PathPlanner
+from map_maker import MapMaker
 
 class PathPlannerTest(unittest.TestCase):
     def setUp(self):
         self.path_planner = PathPlanner()
+        # will need a map:
+        map_maker = MapMaker()
+        map_maker.set_map()
+        map_maker.calibrate_map()
+        lowres_map = map_maker.get_lowres_map()
+
+        self.path_planner.set_map(lowres_map)
+        self.path_planner.set_start_node()
+        self.path_planner.set_end_node()
 
     '''
     Function: 
@@ -31,6 +41,13 @@ class PathPlannerTest(unittest.TestCase):
                 current = pi * (j/4)
                 movement = self.path_planner.calculate_angular_movement(current, target)
                 self.assertEqual(correct_movements[j-i], movement)
+
+    def testPos_from_coordinates(self):
+        coord_zero = [0,0]
+        predicted_pos = self.path_planner.pos_from_coordinates(coord_zero)
+        pos_zero = [0,0]
+
+        self.assertEqual(predicted_pos,pos_zero)
     
 if __name__ == '__main__':
     unittest.main()

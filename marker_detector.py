@@ -8,42 +8,8 @@ class MarkerDetector:
         self.parameters =  aruco.DetectorParameters_create()
     
     def detect_markers(self, frame):
-        # Detecting markers in real time
-        gray_image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        markers, ids, _ = aruco.detectMarkers(gray_image, self.aruco_dict, parameters=self.parameters)
-
-        if (len(markers) == 0):
-            pass
-        else:
-            frame = aruco.drawDetectedMarkers(frame, markers)
-            print("[MarkerDetector] Found marker in image.")
-        
-        if frame != []:
-            cv2.imshow("RGB Image Window", frame)
-            cv2.waitKey(3)
-        
-        # # Using webcam
-        # cap = cv2.VideoCapture(1)
-        # while(True):
-        #     ret, frame = cap.read() #640x480
-
-        #     # Detecting markers in real time
-        #     gray_image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        #     markers, ids, _ = aruco.detectMarkers(gray_image, self.aruco_dict, parameters=self.parameters)
-
-        #     if (len(markers) == 0):
-        #         # print("No marker found.")
-        #         pass
-        #     else:
-        #         aruco.drawDetectedMarkers(frame, markers)
-        #         print("[MarkerDetector] Found marker in image. Id: " + str(ids[0]))
-        #         corners = np.reshape(markers, (-1, 2))
-        #         for c in corners:
-        #             print(c)
-
-    def test(self):
         # Using webcam
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(1)
         while(True):
             ret, frame = cap.read() #640x480
 
@@ -56,13 +22,25 @@ class MarkerDetector:
                 pass
             else:
                 aruco.drawDetectedMarkers(frame, markers)
-                print("[MarkerDetector] Found marker in image. Id: " + str(ids[0]))
+                # print("[MarkerDetector] Found marker in image. Ids: " + str(ids))
                 corners = np.reshape(markers, (-1, 2))
-                for c in corners:
-                    print(c)
+                ns = ""
+                we = ""
+                
+                if corners[0][1] > corners[1][1] and corners[0][0] < corners[2][0]:
+                    ns = "North"
+                elif corners[0][1] < corners[1][1] and corners[0][0] > corners[2][0]:
+                    ns = "South"
+
+                if corners[0][1] > corners[2][1] and corners[0][1] > corners[3][1] and corners[0][0] > corners[1][0] and corners[0][0] > corners[2][0]:
+                    we = "West"
+                elif corners[0][1] < corners[2][1] and corners[0][1] < corners[3][1] and corners[0][0] < corners[1][0] and corners[0][0] < corners[2][0]:
+                    we = "East"
+
+                print("[MarkerDetector] Rover is facing: " + ns + " " + we)
 
             # Show image, press q to exit
-            cv2.imshow('clean image', frame)
+            cv2.imshow('Webcam Image', frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
@@ -71,4 +49,4 @@ class MarkerDetector:
 
 if __name__ == '__main__':
     md = MarkerDetector()
-    md.test()
+    md.detect_markers()
